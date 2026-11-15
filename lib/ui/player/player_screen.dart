@@ -73,6 +73,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   Duration _buffer = Duration.zero;
   bool _playing = false;
   bool _buffering = true;
+  double _volume = 100;
+
+  /// Where mute returns to. Restoring to a flat 100% instead would shout at
+  /// anyone who had turned the film down before muting it.
+  double _lastAudible = 100;
   bool _completed = false;
   String? _error;
 
@@ -180,6 +185,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       }),
       _player.stream.buffering.listen((b) {
         if (mounted) setState(() => _buffering = b);
+      }),
+      _player.stream.volume.listen((v) {
+        if (mounted && v != _volume) setState(() => _volume = v);
       }),
       _player.stream.completed.listen((c) {
         if (!mounted || !c) return;
@@ -709,6 +717,25 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   bool get _pipPossible =>
       Device.i.supportsPip && _settings.autoPip && _playing && !_closing;
 
+  /// Every volume change runs through here: the drag, the arrow keys and the
+  /// control in the bar all have to agree on what mute returns to.
+  void _setVolume(double value, {bool flash = true}) {
+    final v = value.clamp(0.0, 100.0);
+    if (v > 0) _lastAudible = v;
+    _player.setVolume(v);
+    if (mounted) setState(() => _volume = v);
+    if (flash) _flash(v == 0 ? 'muted' : 'volume ${v.round()}%');
+  }
+
+  void _toggleMute() {
+    if (_volume == 0) {
+      _setVolume(_lastAudible > 0 ? _lastAudible : 100);
+    } else {
+      _lastAudible = _volume;
+      _setVolume(0);
+    }
+  }
+
   /// The single back path: sheets and the lock close first, a full-screen
   /// window un-full-screens, and only then does the player leave.
   ///
@@ -780,11 +807,18 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
     final player = _player;
     final proxy = _mediaProxy;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // The loopback server has to die first. `Player.dispose` ends in
+      // `mpv_terminate_destroy`, which blocks until libmpv's demuxer thread
+      // joins -- and that thread is parked on a Range read against this very
+      // server, which is served by the isolate the dispose is blocking. Wait
+      // for libmpv before closing and the two wait on each other forever:
+      // the window stops painting and Windows marks it Not Responding.
+      // Forcing the sockets shut makes the read fail, the demuxer exits, and
+      // dispose returns.
+      proxy.close();
       try {
         await player.dispose();
       } catch (_) {}
-      // The loopback server feeds libmpv, so it closes only once libmpv has.
-      proxy.close();
     });
     WakelockPlus.disable();
     Native.i.setPlayerActive(false);
@@ -921,14 +955,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                             : null,
                         onHoldStart: () => _holdSpeed(true),
                         onHoldEnd: () => _holdSpeed(false),
-                        onVolumeDelta: (d) {
-                          final v = (_player.state.volume - d * 100).clamp(
-                            0.0,
-                            100.0,
-                          );
-                          _player.setVolume(v);
-                          _flash('volume ${v.round()}%');
-                        },
+                        onVolumeDelta: (d) => _setVolume(_volume - d * 100),
                       ),
 
                       // ── netflix-style pause panel ──
@@ -1007,6 +1034,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                             _seekTo(d);
                           },
                           onNext: _next == null ? null : () => _playNext(),
+                          volume: _volume,
+                          onVolume: _setVolume,
+                          onToggleMute: _toggleMute,
                           onToggleAutoNext: () {
                             final on = !settings.autoplayNext;
                             ref
@@ -1190,17 +1220,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
     ),
     _Volume: CallbackAction<_Volume>(
       onInvoke: (i) {
-        final v = (_player.state.volume + i.delta * 100).clamp(0.0, 100.0);
-        _player.setVolume(v);
-        _flash('volume ${v.round()}%');
+        _setVolume(_volume + i.delta * 100);
         return null;
       },
     ),
     _Mute: CallbackAction<_Mute>(
       onInvoke: (_) {
-        final muted = _player.state.volume == 0;
-        _player.setVolume(muted ? 100 : 0);
-        _flash(muted ? 'sound on' : 'muted');
+        _toggleMute();
         return null;
       },
     ),

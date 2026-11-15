@@ -107,6 +107,9 @@ class PlayerChrome extends StatelessWidget {
     required this.hasNext,
     required this.autoNext,
     required this.skipSeconds,
+    required this.volume,
+    required this.onVolume,
+    required this.onToggleMute,
     required this.canPip,
     this.onMinimize,
     this.onToggleMaximize,
@@ -126,6 +129,11 @@ class PlayerChrome extends StatelessWidget {
     required this.onPip,
     required this.onSheet,
   });
+
+  /// 0–100, as libmpv reports it.
+  final double volume;
+  final ValueChanged<double> onVolume;
+  final VoidCallback onToggleMute;
 
   final bool visible;
   final String title;
@@ -375,9 +383,14 @@ class PlayerChrome extends StatelessWidget {
                           active: captionsOn,
                           onPressed: () => onSheet(PlayerSheet.captions),
                         ),
+                        VolumeControl(
+                          volume: volume,
+                          onChanged: onVolume,
+                          onToggleMute: onToggleMute,
+                        ),
                         _BarAction(
                           icon: Icons.graphic_eq,
-                          label: 'audio',
+                          label: 'audio track',
                           onPressed: () => onSheet(PlayerSheet.audio),
                         ),
                         _BarAction(
@@ -650,6 +663,143 @@ class _BarAction extends StatelessWidget {
       onPressed: onPressed,
     ),
   );
+}
+
+/// Mute plus a level, sized and bordered to sit in the chip row as one more
+/// chip. The level is the seek rule's language at a smaller scale: a flat
+/// track, a flat fill, a square handle.
+///
+/// The app had volume on the arrow keys and on a vertical drag over the right
+/// half of the picture, and nothing a pointer or a thumb could find. Those two
+/// still work; this is the one you can see.
+class VolumeControl extends StatefulWidget {
+  const VolumeControl({
+    super.key,
+    required this.volume,
+    required this.onChanged,
+    required this.onToggleMute,
+  });
+
+  final double volume;
+  final ValueChanged<double> onChanged;
+  final VoidCallback onToggleMute;
+
+  @override
+  State<VolumeControl> createState() => _VolumeControlState();
+}
+
+class _VolumeControlState extends State<VolumeControl> {
+  bool _hovered = false;
+  bool _dragging = false;
+
+  IconData get _icon {
+    if (widget.volume == 0) return Icons.volume_off_outlined;
+    if (widget.volume < 34) return Icons.volume_mute_outlined;
+    if (widget.volume < 67) return Icons.volume_down_outlined;
+    return Icons.volume_up_outlined;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = Layout.of(context);
+    final muted = widget.volume == 0;
+    final height = 38.0 * (l.isTV ? 1.25 : 1.0);
+    final trackWidth = l.isTV ? 120.0 : 84.0;
+    final ratio = (widget.volume / 100).clamp(0.0, 1.0);
+
+    return Padding(
+      padding: const EdgeInsets.only(right: DZ.gap),
+      child: Container(
+        height: height,
+        // Transparent over a white hairline, exactly as the outlined chips
+        // beside it are drawn, so the row reads as one run of controls.
+        decoration: BoxDecoration(
+          border: Border.all(color: DZ.white, width: DZ.hairline),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              button: true,
+              label: muted ? 'unmute' : 'mute',
+              child: Tooltip(
+                message: muted ? 'unmute' : 'mute',
+                child: InkWell(
+                  onTap: widget.onToggleMute,
+                  child: SizedBox(
+                    width: height,
+                    height: height,
+                    child: Icon(
+                      _icon,
+                      size: 18,
+                      color: muted ? DZ.grey2 : DZ.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            MouseRegion(
+              onEnter: (_) => setState(() => _hovered = true),
+              onExit: (_) => setState(() => _hovered = false),
+              child: Semantics(
+                slider: true,
+                label: 'volume',
+                value: '${widget.volume.round()}%',
+                onIncrease: () => widget.onChanged(widget.volume + 5),
+                onDecrease: () => widget.onChanged(widget.volume - 5),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onHorizontalDragStart: (_) =>
+                      setState(() => _dragging = true),
+                  onHorizontalDragUpdate: (e) =>
+                      widget.onChanged((e.localPosition.dx / trackWidth) * 100),
+                  onHorizontalDragEnd: (_) => setState(() => _dragging = false),
+                  onTapDown: (e) =>
+                      widget.onChanged((e.localPosition.dx / trackWidth) * 100),
+                  child: SizedBox(
+                    width: trackWidth,
+                    height: height,
+                    child: Stack(
+                      alignment: Alignment.centerLeft,
+                      children: [
+                        Align(
+                          alignment: Alignment.center,
+                          child: Container(height: 3, color: DZ.grey3),
+                        ),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            height: 3,
+                            width: trackWidth * ratio,
+                            color: muted ? DZ.grey2 : DZ.cyan,
+                          ),
+                        ),
+                        Positioned(
+                          left: (trackWidth * ratio - 5).clamp(
+                            0.0,
+                            trackWidth - 10,
+                          ),
+                          child: AnimatedContainer(
+                            duration: reducedMotion(context)
+                                ? Duration.zero
+                                : DZ.stateChange,
+                            width: 10,
+                            height: (_hovered || _dragging) ? 18 : 14,
+                            color: muted ? DZ.grey2 : DZ.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Locked: only the way out.
