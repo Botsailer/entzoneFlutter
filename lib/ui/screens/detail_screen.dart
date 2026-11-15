@@ -18,8 +18,10 @@ import '../widgets/pivot.dart';
 import '../widgets/poster_tile.dart';
 import '../widgets/tile.dart';
 
-final _detailProvider =
-    FutureProvider.autoDispose.family<DetailData, Subject>((ref, subject) async {
+final _detailProvider = FutureProvider.autoDispose.family<DetailData, Subject>((
+  ref,
+  subject,
+) async {
   try {
     return await Api.i.detail(subject.detailPath);
   } catch (e) {
@@ -83,7 +85,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
           }),
           seasonPinned: _seasonPinned,
           synopsisOpen: _synopsisOpen,
-          onToggleSynopsis: () => setState(() => _synopsisOpen = !_synopsisOpen),
+          onToggleSynopsis: () =>
+              setState(() => _synopsisOpen = !_synopsisOpen),
         ),
       ),
     );
@@ -105,7 +108,10 @@ class _Frame extends StatelessWidget {
         ListView(
           padding: EdgeInsets.zero,
           children: [
-            SizedBox(height: l.size.height * 0.34, child: Art(url: subject.cover?.url)),
+            SizedBox(
+              height: l.size.height * 0.34,
+              child: Art(url: subject.cover?.url),
+            ),
             child,
           ],
         ),
@@ -124,11 +130,11 @@ class _CloseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MetroIconButton(
-        icon: Icons.arrow_back,
-        tooltip: 'back',
-        size: Device.i.isTV ? 54 : 44,
-        onPressed: () => Navigator.of(context).maybePop(),
-      );
+    icon: Icons.arrow_back,
+    tooltip: 'back',
+    size: Device.i.isTV ? 54 : 44,
+    onPressed: () => Navigator.of(context).maybePop(),
+  );
 }
 
 class _Body extends ConsumerWidget {
@@ -158,7 +164,9 @@ class _Body extends ConsumerWidget {
     final isSeries = s.isSeries && seasons.isNotEmpty;
     final progress = ref.watch(progressProvider);
     final history = ref.watch(historyProvider);
-    final saved = ref.watch(watchlistProvider).any((x) => x.subjectId == s.subjectId);
+    final saved = ref
+        .watch(watchlistProvider)
+        .any((x) => x.subjectId == s.subjectId);
     final related = ref.watch(_relatedProvider(s.subjectId));
     final downloads = ref.watch(downloadsByIdProvider);
 
@@ -167,8 +175,11 @@ class _Body extends ConsumerWidget {
     //   last episode unfinished  → continue it
     //   last episode finished    → the next one, into the next season
     //   whole series finished    → start again
-    final hist = history.where((e) => e.subject.subjectId == s.subjectId).firstOrNull;
-    final histEp = (hist?.episode != null &&
+    final hist = history
+        .where((e) => e.subject.subjectId == s.subjectId)
+        .firstOrNull;
+    final histEp =
+        (hist?.episode != null &&
             seasons.any((x) => x.se == hist!.episode!.season))
         ? hist!.episode
         : null;
@@ -199,12 +210,15 @@ class _Body extends ConsumerWidget {
         ? seasonIndex
         : () {
             if (histEp == null) return 0;
-            final i = seasons.indexWhere((x) => x.se == (target?.season ?? histEp.season));
+            final i = seasons.indexWhere(
+              (x) => x.se == (target?.season ?? histEp.season),
+            );
             return i < 0 ? 0 : i;
           }();
 
-    final targetProgress =
-        target != null ? progress[progressKey(s.subjectId, target)] : progress[progressKey(s.subjectId)];
+    final targetProgress = target != null
+        ? progress[progressKey(s.subjectId, target)]
+        : progress[progressKey(s.subjectId)];
 
     final movieDownload = downloads[downloadId(s.subjectId, 0, 0)];
 
@@ -271,97 +285,108 @@ class _Body extends ConsumerWidget {
                 right: l.margin + l.overscan.right,
                 bottom: 56 + l.overscan.bottom,
               ),
-              sliver: SliverList.list(children: [
-                const SizedBox(height: 18),
+              sliver: SliverList.list(
+                children: [
+                  const SizedBox(height: 18),
 
-                // ── actions ──
-                Wrap(
-                  spacing: DZ.gap,
-                  runSpacing: DZ.gap,
-                  children: [
-                    _PlayAction(
-                      subject: s,
-                      detail: detail,
-                      target: target,
-                      mode: mode,
-                      progress: targetProgress,
-                      isSeries: isSeries,
-                    ),
-                    MetroButton(
-                      label: saved ? 'in my list' : 'my list',
-                      icon: saved ? Icons.check : Icons.add,
-                      chevron: false,
-                      onPressed: () {
-                        final now = ref.read(watchlistProvider.notifier).toggle(s);
-                        notify(context, now ? 'added to my list' : 'removed from my list');
-                      },
-                    ),
-                    if (!isSeries)
-                      _MovieDownloadAction(
-                        subject: s,
-                        detail: detail,
-                        item: movieDownload,
-                      ),
-                  ],
-                ),
-
-                // ── synopsis ──
-                if ((s.description ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 26),
-                  _Synopsis(
-                    text: s.description!,
-                    open: synopsisOpen,
-                    onToggle: onToggleSynopsis,
-                  ),
-                ],
-
-                if (s.genres.isNotEmpty) ...[
-                  const SizedBox(height: 16),
+                  // ── actions ──
                   Wrap(
                     spacing: DZ.gap,
                     runSpacing: DZ.gap,
                     children: [
-                      for (final g in s.genres)
-                        _Chip(
-                          label: g,
-                          onTap: () => Nav.openGrid(
+                      _PlayAction(
+                        subject: s,
+                        detail: detail,
+                        target: target,
+                        mode: mode,
+                        progress: targetProgress,
+                        isSeries: isSeries,
+                      ),
+                      MetroButton(
+                        label: saved ? 'in my list' : 'my list',
+                        icon: saved ? Icons.check : Icons.add,
+                        chevron: false,
+                        onPressed: () {
+                          final now = ref
+                              .read(watchlistProvider.notifier)
+                              .toggle(s);
+                          notify(
                             context,
-                            title: g,
-                            loader: (page) async {
-                              final r = await Api.i.filter(FilterQuery(
-                                channelId: s.isSeries ? Channel.tv : Channel.movie,
-                                genre: g,
-                                page: page,
-                              ));
-                              return r.items;
-                            },
-                          ),
+                            now ? 'added to my list' : 'removed from my list',
+                          );
+                        },
+                      ),
+                      if (!isSeries)
+                        _MovieDownloadAction(
+                          subject: s,
+                          detail: detail,
+                          item: movieDownload,
                         ),
                     ],
                   ),
-                ],
 
-                // ── the season pivot: the signature move ──
-                if (isSeries)
-                  _Seasons(
-                    subject: s,
-                    detail: detail,
-                    seasons: seasons,
-                    index: landingSeason.clamp(0, seasons.length - 1),
-                    onSeason: onSeason,
+                  // ── synopsis ──
+                  if ((s.description ?? '').isNotEmpty) ...[
+                    const SizedBox(height: 26),
+                    _Synopsis(
+                      text: s.description!,
+                      open: synopsisOpen,
+                      onToggle: onToggleSynopsis,
+                    ),
+                  ],
+
+                  if (s.genres.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: DZ.gap,
+                      runSpacing: DZ.gap,
+                      children: [
+                        for (final g in s.genres)
+                          _Chip(
+                            label: g,
+                            onTap: () => Nav.openGrid(
+                              context,
+                              title: g,
+                              loader: (page) async {
+                                final r = await Api.i.filter(
+                                  FilterQuery(
+                                    channelId: s.isSeries
+                                        ? Channel.tv
+                                        : Channel.movie,
+                                    genre: g,
+                                    page: page,
+                                  ),
+                                );
+                                return r.items;
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+
+                  // ── the season pivot: the signature move ──
+                  if (isSeries)
+                    _Seasons(
+                      subject: s,
+                      detail: detail,
+                      seasons: seasons,
+                      index: landingSeason.clamp(0, seasons.length - 1),
+                      onSeason: onSeason,
+                    ),
+
+                  // ── cast ──
+                  if (detail.stars.isNotEmpty) _Cast(stars: detail.stars),
+
+                  // ── related ──
+                  related.maybeWhen(
+                    data: (list) => list.isEmpty
+                        ? const SizedBox.shrink()
+                        : _RelatedRow(subjects: list),
+                    orElse: () => const SizedBox.shrink(),
                   ),
-
-                // ── cast ──
-                if (detail.stars.isNotEmpty) _Cast(stars: detail.stars),
-
-                // ── related ──
-                related.maybeWhen(
-                  data: (list) => list.isEmpty
-                      ? const SizedBox.shrink()
-                      : _RelatedRow(subjects: list),
-                  orElse: () => const SizedBox.shrink(),
-                ),
-              ]),
+                ],
+              ),
             ),
           ],
         ),
@@ -427,11 +452,17 @@ class _PlayActionState extends ConsumerState<_PlayAction> {
       await Nav.play(
         context,
         subject: widget.subject,
-        source: widget.target == null ? source : source.copyWith(episode: widget.target),
+        source: widget.target == null
+            ? source
+            : source.copyWith(episode: widget.target),
         next: widget.target == null
             ? null
             : makeNextResolver(
-                widget.subject, widget.detail, widget.detail.seasons, widget.target!),
+                widget.subject,
+                widget.detail,
+                widget.detail.seasons,
+                widget.target!,
+              ),
         detail: widget.detail,
       );
     } catch (e) {
@@ -448,9 +479,10 @@ class _PlayActionState extends ConsumerState<_PlayAction> {
     final label = _busy
         ? 'starting…'
         : switch (widget.mode) {
-            'resume' => ep != null
-                ? 'resume ${ep.short}'
-                : 'resume ${formatTime(p?.position ?? 0)}',
+            'resume' =>
+              ep != null
+                  ? 'resume ${ep.short}'
+                  : 'resume ${formatTime(p?.position ?? 0)}',
             'next' => 'play ${ep?.short ?? 'next'}',
             'watch again' => 'watch again',
             _ => ep != null ? 'play ${ep.short}' : 'play',
@@ -486,43 +518,42 @@ class _MovieDownloadAction extends ConsumerWidget {
         label: 'download',
         icon: Icons.download_outlined,
         chevron: false,
-        onPressed: () => startDownloadFlow(
-          context,
-          ref,
-          subject: subject,
-          se: 0,
-          ep: 0,
-        ),
+        onPressed: () =>
+            startDownloadFlow(context, ref, subject: subject, se: 0, ep: 0),
       );
     }
     return switch (it.status) {
       DownloadStatus.done => MetroButton(
-          label: 'downloaded · ${formatBytes(it.total)}',
-          icon: Icons.offline_pin_outlined,
-          chevron: false,
-          fill: DZ.magenta,
-          primary: true,
-          onPressed: () => Nav.openLibrary(context, LibraryTab.downloads),
-        ),
+        label: 'downloaded · ${formatBytes(it.total)}',
+        icon: Icons.offline_pin_outlined,
+        chevron: false,
+        fill: DZ.magenta,
+        primary: true,
+        onPressed: () => Nav.openLibrary(context, LibraryTab.downloads),
+      ),
       DownloadStatus.downloading => MetroButton(
-          label: '${(it.ratio * 100).round()}%  ·  pause',
-          icon: Icons.pause,
-          chevron: false,
-          onPressed: () => Downloads.i.pause(it.id),
-        ),
+        label: '${(it.ratio * 100).round()}%  ·  pause',
+        icon: Icons.pause,
+        chevron: false,
+        onPressed: () => Downloads.i.pause(it.id),
+      ),
       DownloadStatus.paused || DownloadStatus.queued => MetroButton(
-          label: 'resume download',
-          icon: Icons.download_outlined,
-          chevron: false,
-          onPressed: () => Downloads.i.resume(it.id),
-        ),
+        label: 'resume download',
+        icon: Icons.download_outlined,
+        chevron: false,
+        onPressed: () => Downloads.i.resume(it.id),
+      ),
+      // `fill` only paints a primary button, so the red here was dead and the
+      // failure read as an ordinary action. Red is the ladder's own colour for
+      // failed, and the label names the problem before the recovery.
       DownloadStatus.failed => MetroButton(
-          label: 'retry download',
-          icon: Icons.refresh,
-          chevron: false,
-          fill: DZ.red,
-          onPressed: () => Downloads.i.resume(it.id),
-        ),
+        label: 'download failed · retry',
+        icon: Icons.refresh,
+        chevron: false,
+        fill: DZ.red,
+        primary: true,
+        onPressed: () => Downloads.i.resume(it.id),
+      ),
     };
   }
 }
@@ -530,7 +561,11 @@ class _MovieDownloadAction extends ConsumerWidget {
 /// Synopsis, clamped to a readable measure and expandable in place rather than
 /// behind a modal.
 class _Synopsis extends StatelessWidget {
-  const _Synopsis({required this.text, required this.open, required this.onToggle});
+  const _Synopsis({
+    required this.text,
+    required this.open,
+    required this.onToggle,
+  });
 
   final String text;
   final bool open;
@@ -552,7 +587,9 @@ class _Synopsis extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AnimatedSize(
-                duration: reducedMotion(context) ? Duration.zero : DZ.stateChange,
+                duration: reducedMotion(context)
+                    ? Duration.zero
+                    : DZ.stateChange,
                 curve: DZ.ease,
                 alignment: Alignment.topLeft,
                 child: Text(
@@ -628,10 +665,7 @@ class _Seasons extends ConsumerWidget {
             onChanged: onSeason,
             style: l.t(DZ.subtitle),
             headerGap: 12,
-            trailing: Text(
-              '${season.maxEp} episodes',
-              style: l.t(DZ.caption),
-            ),
+            trailing: Text('${season.maxEp} episodes', style: l.t(DZ.caption)),
             builder: (context, i) => _EpisodeField(
               subject: subject,
               detail: detail,
@@ -686,7 +720,8 @@ class _EpisodeField extends ConsumerWidget {
           detail: detail,
           episode: ep,
           progress: progress[progressKey(subject.subjectId, ep)],
-          download: downloads[downloadId(subject.subjectId, ep.season, ep.episode)],
+          download:
+              downloads[downloadId(subject.subjectId, ep.season, ep.episode)],
         );
       },
     );
@@ -723,8 +758,11 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
       subject: widget.subject,
       detail: widget.detail,
       episode: widget.episode,
-      onUnavailable: () =>
-          notify(context, 'this episode has no source right now', fill: DZ.amber),
+      onUnavailable: () => notify(
+        context,
+        'this episode has no source right now',
+        fill: DZ.amber,
+      ),
     );
     if (mounted) setState(() => _busy = false);
   }
@@ -746,9 +784,21 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
     return MetroTile(
       fill: fill,
       onTap: _busy ? null : _play,
-      onHold: () => _episodeMenu(context, ref, widget.subject, widget.detail, widget.episode, d),
-      semanticLabel: 'episode ${widget.episode.episode}'
-          '${done ? ', watched' : started ? ', ${(p.ratio * 100).round()} percent watched' : ''}'
+      onHold: () => _episodeMenu(
+        context,
+        ref,
+        widget.subject,
+        widget.detail,
+        widget.episode,
+        d,
+      ),
+      semanticLabel:
+          'episode ${widget.episode.episode}'
+          '${done
+              ? ', watched'
+              : started
+              ? ', ${(p.ratio * 100).round()} percent watched'
+              : ''}'
           '${offline ? ', downloaded' : ''}',
       child: Stack(
         fit: StackFit.expand,
@@ -762,9 +812,12 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
                   children: [
                     Text(
                       '${widget.episode.episode}',
-                      style: l.t(DZ.numeral).copyWith(
+                      style: l
+                          .t(DZ.numeral)
+                          .copyWith(
                             color: ink,
-                            fontSize: (DZ.numeral.fontSize! * l.textScale) * 0.62,
+                            fontSize:
+                                (DZ.numeral.fontSize! * l.textScale) * 0.62,
                           ),
                     ),
                     const Spacer(),
@@ -773,7 +826,11 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
                     else if (d != null && d.active)
                       SizedBox(
                         width: 26,
-                        child: TileProgress(ratio: d.ratio, color: DZ.magenta, height: 3),
+                        child: TileProgress(
+                          ratio: d.ratio,
+                          color: DZ.magenta,
+                          height: 3,
+                        ),
                       ),
                   ],
                 ),
@@ -782,13 +839,13 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
                   _busy
                       ? 'starting…'
                       : done
-                          ? 'watched'
-                          : started
-                              ? formatLeft(p.remaining)
-                              : 'episode ${widget.episode.episode}',
-                  style: l.t(DZ.caption).copyWith(
-                        color: done ? DZ.black.withValues(alpha: 0.72) : DZ.grey1,
-                      ),
+                      ? 'watched'
+                      : started
+                      ? formatLeft(p.remaining)
+                      : 'episode ${widget.episode.episode}',
+                  style: l
+                      .t(DZ.caption)
+                      .copyWith(color: done ? DZ.black : DZ.grey1),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -800,7 +857,12 @@ class _EpisodeTileState extends ConsumerState<_EpisodeTile> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: TileProgress(ratio: p.ratio, color: DZ.cyan, height: 4, track: false),
+              child: TileProgress(
+                ratio: p.ratio,
+                color: DZ.cyan,
+                height: 4,
+                track: false,
+              ),
             ),
         ],
       ),
@@ -826,8 +888,10 @@ Future<void> _episodeMenu(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(DZ.margin, 20, DZ.margin, 14),
-            child: Text('${subject.cleanTitle.toLowerCase()} · ${ep.short}',
-                style: DZ.subtitle),
+            child: Text(
+              '${subject.cleanTitle.toLowerCase()} · ${ep.short}',
+              style: DZ.subtitle,
+            ),
           ),
           if (item == null)
             _MenuRow(
@@ -835,8 +899,13 @@ Future<void> _episodeMenu(
               icon: Icons.download_outlined,
               onTap: () {
                 Navigator.pop(ctx);
-                startDownloadFlow(context, ref,
-                    subject: subject, se: ep.season, ep: ep.episode);
+                startDownloadFlow(
+                  context,
+                  ref,
+                  subject: subject,
+                  se: ep.season,
+                  ep: ep.episode,
+                );
               },
             )
           else if (item.status == DownloadStatus.done)
@@ -851,8 +920,12 @@ Future<void> _episodeMenu(
             )
           else
             _MenuRow(
-              label: item.status == DownloadStatus.downloading ? 'pause download' : 'resume download',
-              icon: item.status == DownloadStatus.downloading ? Icons.pause : Icons.play_arrow,
+              label: item.status == DownloadStatus.downloading
+                  ? 'pause download'
+                  : 'resume download',
+              icon: item.status == DownloadStatus.downloading
+                  ? Icons.pause
+                  : Icons.play_arrow,
               onTap: () {
                 Navigator.pop(ctx);
                 item.status == DownloadStatus.downloading
@@ -865,7 +938,9 @@ Future<void> _episodeMenu(
             icon: Icons.check,
             onTap: () {
               Navigator.pop(ctx);
-              ref.read(progressProvider.notifier).save(subject.subjectId, ep, 1, 1);
+              ref
+                  .read(progressProvider.notifier)
+                  .save(subject.subjectId, ep, 1, 1);
             },
           ),
           _MenuRow(
@@ -873,7 +948,9 @@ Future<void> _episodeMenu(
             icon: Icons.restart_alt,
             onTap: () {
               Navigator.pop(ctx);
-              ref.read(progressProvider.notifier).clearOne(subject.subjectId, ep);
+              ref
+                  .read(progressProvider.notifier)
+                  .clearOne(subject.subjectId, ep);
             },
           ),
           const SizedBox(height: 10),
@@ -898,16 +975,20 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: DZ.margin, vertical: 15),
-          child: Row(children: [
-            Icon(icon, size: 20, color: tone),
-            const SizedBox(width: 14),
-            Expanded(child: Text(label, style: DZ.body.copyWith(color: tone))),
-          ]),
-        ),
-      );
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DZ.margin, vertical: 15),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: tone),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(label, style: DZ.body.copyWith(color: tone)),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Cast, as square tiles with the face bled to the edge — not circular avatars,
@@ -950,7 +1031,8 @@ class _Cast extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      (p.isDirector ? 'director' : p.character ?? '').toLowerCase(),
+                      (p.isDirector ? 'director' : p.character ?? '')
+                          .toLowerCase(),
                       style: l.t(DZ.caption),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

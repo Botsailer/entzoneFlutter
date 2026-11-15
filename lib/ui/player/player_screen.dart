@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:window_manager/window_manager.dart';
 
 import '../../core/device.dart';
 import '../../core/format.dart';
@@ -54,7 +55,7 @@ class PlayerScreen extends ConsumerStatefulWidget {
 }
 
 class _PlayerScreenState extends ConsumerState<PlayerScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, WindowListener {
   late final Player _player;
   late final VideoController _video;
   final _preloader = NextPreloader();
@@ -77,6 +78,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
   bool _controlsVisible = true;
   bool _locked = false;
+  bool _windowFullscreen = false;
+  bool _windowMaximized = false;
+  bool _fullscreenOwned = false;
   PlayerSheet _sheet = PlayerSheet.none;
   BoxFit _fit = BoxFit.contain;
   double _speed = 1.0;
@@ -97,6 +101,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   /// progress for the *old* episode is never written under the new one.
   bool _switching = false;
 
+  /// Set once the player is on its way out, so a second back press, an
+  /// Escape repeat or a remote `stop` cannot pop twice.
+  bool _closing = false;
+
   String? _audioTrackId;
   String? _subtitleTrackId;
   Tracks _tracks = const Tracks();
@@ -109,6 +117,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (!kIsWeb && Platform.isWindows) {
+      windowManager.addListener(this);
+      _syncWindowState();
+    }
 
     _source = widget.source;
     _next = widget.next;
@@ -611,42 +623,169 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
               DeviceOrientation.landscapeLeft,
               DeviceOrientation.landscapeRight,
             ]
-          : const [DeviceOrientation.portraitUp],
+          : const [
+              DeviceOrientation.portraitUp,
+              DeviceOrientation.portraitDown,
+            ],
     );
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
-      _writeProgress();
-      Store.i.flush();
-      if (!_settings.backgroundPlay && !Native.i.pipActive.value) {
-        _player.pause();
-      }
+  Future<void> _syncWindowState() async {
+    final fullscreen = await windowManager.isFullScreen();
+    final maximized = await windowManager.isMaximized();
+    if (mounted) {
+      setState(() {
+        _windowFullscreen = fullscreen;
+        _windowMaximized = maximized;
+      });
     }
   }
 
-  Future<void> _close() async {
-    _writeProgress();
-    await Store.i.flush();
-    if (mounted) Navigator.of(context).maybePop();
+  Future<void> _toggleFullscreen() async {
+    if (kIsWeb || !Platform.isWindows) return;
+    final next = !(await windowManager.isFullScreen());
+    await windowManager.setFullScreen(next);
+    _fullscreenOwned = next;
+    if (mounted) setState(() => _windowFullscreen = next);
+    _poke();
+  }
+
+  Future<void> _toggleMaximize() async {
+    if (kIsWeb || !Platform.isWindows) return;
+    if (await windowManager.isFullScreen()) {
+      await windowManager.setFullScreen(false);
+      _fullscreenOwned = false;
+    } else if (await windowManager.isMaximized()) {
+      await windowManager.unmaximize();
+    } else {
+      await windowManager.maximize();
+    }
+    await _syncWindowState();
+    _poke();
+  }
+
+  @override
+  void onWindowMaximize() => _syncWindowState();
+
+  @override
+  void onWindowUnmaximize() => _syncWindowState();
+
+  @override
+  void onWindowEnterFullScreen() => _syncWindowState();
+
+  @override
+  void onWindowLeaveFullScreen() => _syncWindowState();
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // `inactive` is transient — the notification shade, the app switcher, an
+    // incoming call. Pausing there would stop the video every time the shade
+    // is pulled down, so only a real background counts.
+    if (state != AppLifecycleState.paused &&
+        state != AppLifecycleState.hidden) {
+      return;
+    }
+    try {
+      _writeProgress();
+    } catch (_) {}
+    unawaited(Store.i.flush());
+    if (_settings.backgroundPlay) return;
+    // Entering picture-in-picture backgrounds the activity *before* the
+    // platform reports the mode change, so `pipActive` is still false here.
+    // Pausing on that signal alone paused every PiP window the instant it
+    // opened; an armed auto-PiP is given a moment to confirm.
+    if (Native.i.pipActive.value) return;
+    if (_pipPossible) {
+      Timer(const Duration(milliseconds: 400), () {
+        if (!mounted || Native.i.pipActive.value) return;
+        if (!_settings.backgroundPlay) _player.pause();
+      });
+      return;
+    }
+    _player.pause();
+  }
+
+  /// True when this exit may still turn into a picture-in-picture window.
+  bool get _pipPossible =>
+      Device.i.supportsPip && _settings.autoPip && _playing && !_closing;
+
+  /// The single back path: sheets and the lock close first, a full-screen
+  /// window un-full-screens, and only then does the player leave.
+  ///
+  /// Returns true when it handled the gesture without leaving.
+  bool _handleBack() {
+    if (_sheet != PlayerSheet.none) {
+      setState(() => _sheet = PlayerSheet.none);
+      return true;
+    }
+    if (_locked) {
+      setState(() => _locked = false);
+      _poke();
+      return true;
+    }
+    if (_windowFullscreen && !kIsWeb && Platform.isWindows) {
+      _toggleFullscreen();
+      return true;
+    }
+    _close();
+    return false;
+  }
+
+  /// Leaves the player. Pops directly rather than through `maybePop`, which
+  /// this route's `PopScope(canPop: false)` would refuse — re-entering the
+  /// pop callback instead of closing.
+  void _close() {
+    if (_closing || !mounted) return;
+    _closing = true;
+    try {
+      _writeProgress();
+    } catch (_) {}
+    unawaited(Store.i.flush());
+    final nav = Navigator.of(context);
+    if (nav.canPop()) {
+      nav.pop();
+    } else {
+      _closing = false;
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _writeProgress();
+    if (!kIsWeb && Platform.isWindows) {
+      windowManager.removeListener(this);
+      if (_fullscreenOwned) unawaited(windowManager.setFullScreen(false));
+    }
+    // The last write happens here as well as on the way out, because the OS
+    // can tear this route down without a close. `ref` is still live during
+    // dispose, but a provider that has already gone must not take the app
+    // with it.
+    try {
+      _writeProgress();
+    } catch (_) {}
     _hideTimer?.cancel();
     _toastTimer?.cancel();
     _saveTimer?.cancel();
+    // Streams first: an event delivered after this point would call setState
+    // on a dead element.
     for (final s in _subs) {
-      s.cancel();
+      unawaited(s.cancel());
     }
     _preloader.dispose();
-    _mediaProxy.close();
     _focus.dispose();
-    _player.dispose();
+    // The player owns a native texture that the `Video` child below is still
+    // rendering at this instant — a State is disposed before its children.
+    // Tearing libmpv down now takes the process with it on Windows, so the
+    // engine is released once the tree is gone.
+    final player = _player;
+    final proxy = _mediaProxy;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      try {
+        await player.dispose();
+      } catch (_) {}
+      // The loopback server feeds libmpv, so it closes only once libmpv has.
+      proxy.close();
+    });
     WakelockPlus.disable();
     Native.i.setPlayerActive(false);
     Native.i.setImmersive(false);
@@ -707,14 +846,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        if (_sheet != PlayerSheet.none) {
-          setState(() => _sheet = PlayerSheet.none);
-        } else if (_locked) {
-          setState(() => _locked = false);
-          _poke();
-        } else {
-          _close();
-        }
+        _handleBack();
       },
       child: Scaffold(
         backgroundColor: DZ.black,
@@ -784,6 +916,9 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                         },
                         onDoubleTapLeft: () => _skip(-settings.skipSeconds),
                         onDoubleTapRight: () => _skip(settings.skipSeconds),
+                        onDoubleTapFullscreen: !kIsWeb && Platform.isWindows
+                            ? _toggleFullscreen
+                            : null,
                         onHoldStart: () => _holdSpeed(true),
                         onHoldEnd: () => _holdSpeed(false),
                         onVolumeDelta: (d) {
@@ -848,6 +983,17 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
                           autoNext: settings.autoplayNext,
                           skipSeconds: settings.skipSeconds,
                           canPip: Device.i.supportsPip,
+                          onMinimize: !kIsWeb && Platform.isWindows
+                              ? () => windowManager.minimize()
+                              : null,
+                          onToggleMaximize: !kIsWeb && Platform.isWindows
+                              ? _toggleMaximize
+                              : null,
+                          onToggleFullscreen: !kIsWeb && Platform.isWindows
+                              ? _toggleFullscreen
+                              : null,
+                          isMaximized: _windowMaximized,
+                          isFullscreen: _windowFullscreen,
                           onClose: _close,
                           onPlayPause: _togglePlay,
                           onSkip: _skip,
@@ -1025,6 +1171,7 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
     ),
     const SingleActivator(LogicalKeyboardKey.keyN): const _Next(),
     const SingleActivator(LogicalKeyboardKey.escape): const _Back(),
+    const SingleActivator(LogicalKeyboardKey.f11): const _Fullscreen(),
     const SingleActivator(LogicalKeyboardKey.mediaTrackNext): const _Next(),
   };
 
@@ -1077,11 +1224,13 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
     ),
     _Back: CallbackAction<_Back>(
       onInvoke: (_) {
-        if (_sheet != PlayerSheet.none) {
-          setState(() => _sheet = PlayerSheet.none);
-        } else {
-          _close();
-        }
+        _handleBack();
+        return null;
+      },
+    ),
+    _Fullscreen: CallbackAction<_Fullscreen>(
+      onInvoke: (_) {
+        _toggleFullscreen();
         return null;
       },
     ),
@@ -1090,6 +1239,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen>
 
 class _TogglePlay extends Intent {
   const _TogglePlay();
+}
+
+class _Fullscreen extends Intent {
+  const _Fullscreen();
 }
 
 class _Skip extends Intent {

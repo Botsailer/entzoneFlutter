@@ -49,7 +49,9 @@ class _GridScreenState extends ConsumerState<GridScreen> {
 
   void _onScroll() {
     if (_exhausted || _loadingMore || _loading) return;
-    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 900) _load();
+    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 900) {
+      _load();
+    }
   }
 
   Future<void> _load({bool first = false}) async {
@@ -114,8 +116,10 @@ class _GridScreenState extends ConsumerState<GridScreen> {
                   ),
                   const SizedBox(width: 12),
                   if (!_loading && _items.isNotEmpty)
-                    Text('${_items.length}${_exhausted ? '' : '+'} titles',
-                        style: l.t(DZ.caption)),
+                    Text(
+                      '${_items.length}${_exhausted ? '' : '+'} titles',
+                      style: l.t(DZ.caption),
+                    ),
                 ],
               ),
             ),
@@ -127,47 +131,46 @@ class _GridScreenState extends ConsumerState<GridScreen> {
               child: _loading
                   ? Padding(padding: pad, child: const LoadingBlock())
                   : _error != null
-                      ? Padding(
-                          padding: pad,
-                          child: StateBlock(
-                            headline: 'could not load this list',
-                            detail: _error,
-                            actionLabel: 'try again',
-                            onAction: () => _load(first: true),
-                          ),
-                        )
-                      : _items.isEmpty
-                          ? Padding(
-                              padding: pad,
-                              child: const StateBlock(
-                                headline: 'nothing in this list',
-                                detail: 'The catalog returned no titles here.',
-                              ),
-                            )
-                          : GridView.builder(
-                              controller: _scroll,
-                              padding: pad.copyWith(bottom: 48 + l.overscan.bottom),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: l.columns,
-                                mainAxisSpacing: DZ.gap,
-                                crossAxisSpacing: DZ.gap,
-                                childAspectRatio: 1 / 1.5,
-                              ),
-                              itemCount:
-                                  _items.length + (_loadingMore ? l.columns : 0),
-                              itemBuilder: (context, i) {
-                                if (i >= _items.length) {
-                                  return TileSkeleton(delayIndex: i);
-                                }
-                                final s = _items[i];
-                                return PosterTile(
-                                  subject: s,
-                                  autofocus: i == 0 && Device.i.isTV,
-                                  progress: progress[progressKey(s.subjectId)],
-                                  onTap: () => Nav.openTitle(context, s),
-                                );
-                              },
-                            ),
+                  ? Padding(
+                      padding: pad,
+                      child: StateBlock(
+                        headline: 'could not load this list',
+                        detail: _error,
+                        actionLabel: 'try again',
+                        onAction: () => _load(first: true),
+                      ),
+                    )
+                  : _items.isEmpty
+                  ? Padding(
+                      padding: pad,
+                      child: const StateBlock(
+                        headline: 'nothing in this list',
+                        detail: 'The catalog returned no titles here.',
+                      ),
+                    )
+                  : GridView.builder(
+                      controller: _scroll,
+                      padding: pad.copyWith(bottom: 48 + l.overscan.bottom),
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: l.columns,
+                        mainAxisSpacing: DZ.gap,
+                        crossAxisSpacing: DZ.gap,
+                        childAspectRatio: 1 / 1.5,
+                      ),
+                      itemCount: _items.length + (_loadingMore ? l.columns : 0),
+                      itemBuilder: (context, i) {
+                        if (i >= _items.length) {
+                          return TileSkeleton(delayIndex: i);
+                        }
+                        final s = _items[i];
+                        return PosterTile(
+                          subject: s,
+                          autofocus: i == 0 && Device.i.isTV,
+                          progress: progress[progressKey(s.subjectId)],
+                          onTap: () => Nav.openTitle(context, s),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

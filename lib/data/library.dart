@@ -23,17 +23,18 @@ class HistoryEntry {
   final double duration;
   final int at;
 
-  double get ratio => duration > 0 ? (position / duration).clamp(0.0, 1.0) : 0.0;
+  double get ratio =>
+      duration > 0 ? (position / duration).clamp(0.0, 1.0) : 0.0;
   bool get finished => isWatchedAt(position, duration);
   double get remaining => (duration - position).clamp(0, double.infinity);
 
   Map<String, Object?> toJson() => {
-        'subject': subject.toJson(),
-        'episode': episode?.toJson(),
-        'position': position,
-        'duration': duration,
-        'at': at,
-      };
+    'subject': subject.toJson(),
+    'episode': episode?.toJson(),
+    'position': position,
+    'duration': duration,
+    'at': at,
+  };
 
   static HistoryEntry? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -56,16 +57,22 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
   @override
   List<HistoryEntry> build() =>
       Store.i.getJson(
-          _historyKey,
-          (j) => (j as List? ?? const [])
-              .map(HistoryEntry.fromJson)
-              .whereType<HistoryEntry>()
-              .toList()) ??
+        _historyKey,
+        (j) => (j as List? ?? const [])
+            .map(HistoryEntry.fromJson)
+            .whereType<HistoryEntry>()
+            .toList(),
+      ) ??
       const [];
 
   /// Called repeatedly by the player. Titles that were barely opened are
   /// ignored so a mis-tap never shows up in Continue Watching.
-  void record(Subject subject, EpisodeRef? episode, double position, double duration) {
+  void record(
+    Subject subject,
+    EpisodeRef? episode,
+    double position,
+    double duration,
+  ) {
     if (subject.subjectId.isEmpty || position < 3) return;
     final entry = HistoryEntry(
       subject: subject,
@@ -106,8 +113,9 @@ class HistoryNotifier extends Notifier<List<HistoryEntry>> {
       Store.i.setJson(_historyKey, state.map((e) => e.toJson()).toList());
 }
 
-final historyProvider =
-    NotifierProvider<HistoryNotifier, List<HistoryEntry>>(HistoryNotifier.new);
+final historyProvider = NotifierProvider<HistoryNotifier, List<HistoryEntry>>(
+  HistoryNotifier.new,
+);
 
 /// Day bucket for grouping the history list.
 String dayBucket(int ms) {
@@ -135,15 +143,15 @@ class WatchlistNotifier extends Notifier<List<Subject>> {
   @override
   List<Subject> build() =>
       Store.i.getJson(
-          _listKey,
-          (j) => (j as List? ?? const [])
-              .map(Subject.from)
-              .whereType<Subject>()
-              .toList()) ??
+        _listKey,
+        (j) => (j as List? ?? const [])
+            .map(Subject.from)
+            .whereType<Subject>()
+            .toList(),
+      ) ??
       const [];
 
-  bool contains(String subjectId) =>
-      state.any((s) => s.subjectId == subjectId);
+  bool contains(String subjectId) => state.any((s) => s.subjectId == subjectId);
 
   /// Returns true when the title is now saved.
   bool toggle(Subject s) {
@@ -169,8 +177,9 @@ class WatchlistNotifier extends Notifier<List<Subject>> {
       Store.i.setJson(_listKey, state.map((s) => s.toJson()).toList());
 }
 
-final watchlistProvider =
-    NotifierProvider<WatchlistNotifier, List<Subject>>(WatchlistNotifier.new);
+final watchlistProvider = NotifierProvider<WatchlistNotifier, List<Subject>>(
+  WatchlistNotifier.new,
+);
 
 // ───────────────────────── recent searches ─────────────────────────
 
@@ -181,16 +190,18 @@ class RecentSearchNotifier extends Notifier<List<String>> {
   @override
   List<String> build() =>
       Store.i.getJson(
-          _searchKey,
-          (j) => (j as List? ?? const []).map((e) => e.toString()).toList()) ??
+        _searchKey,
+        (j) => (j as List? ?? const []).map((e) => e.toString()).toList(),
+      ) ??
       const [];
 
   void add(String term) {
     final t = term.trim();
     if (t.isEmpty) return;
-    state = [t, ...state.where((s) => s.toLowerCase() != t.toLowerCase())]
-        .take(_searchMax)
-        .toList();
+    state = [
+      t,
+      ...state.where((s) => s.toLowerCase() != t.toLowerCase()),
+    ].take(_searchMax).toList();
     Store.i.setJson(_searchKey, state);
   }
 
@@ -206,4 +217,6 @@ class RecentSearchNotifier extends Notifier<List<String>> {
 }
 
 final recentSearchProvider =
-    NotifierProvider<RecentSearchNotifier, List<String>>(RecentSearchNotifier.new);
+    NotifierProvider<RecentSearchNotifier, List<String>>(
+      RecentSearchNotifier.new,
+    );

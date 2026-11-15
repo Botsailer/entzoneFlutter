@@ -59,7 +59,8 @@ class Device {
         final info = await DeviceInfoPlugin().androidInfo;
         d.androidSdk = info.version.sdkInt;
         // Leanback is the honest signal: Android TV declares it, phones do not.
-        final tv = info.systemFeatures.contains('android.software.leanback') ||
+        final tv =
+            info.systemFeatures.contains('android.software.leanback') ||
             info.systemFeatures.contains('android.hardware.type.television');
         d.hands = tv ? Hands.remote : Hands.touch;
       } catch (_) {
@@ -120,8 +121,7 @@ class Layout {
   }
 
   /// Pixel width of a tile spanning [span] columns.
-  double span(int span) =>
-      columnWidth * span + DZ.gap * (span - 1);
+  double span(int span) => columnWidth * span + DZ.gap * (span - 1);
 
   double get fieldWidth => size.width - margin * 2;
 
@@ -136,34 +136,34 @@ class Layout {
     final (int cols, double marginPx, double scale) = switch (hands) {
       // A remote at ten feet: fewer, larger tiles and bigger type.
       Hands.remote => (
-          w >= 1800 ? 8 : 6,
-          DZ.marginWide,
-          w >= 1800 ? 1.45 : 1.3,
-        ),
+        w >= 1800 ? 8 : 6,
+        DZ.marginWide,
+        w >= 1800 ? 1.45 : 1.3,
+      ),
       // A pointer: the field fills the window, so column count follows width.
       Hands.pointer => (
-          w >= 1920
-              ? 10
-              : w >= 1440
-                  ? 8
-                  : w >= 1100
-                      ? 6
-                      : w >= 760
-                          ? 5
-                          : 4,
-          w >= 1100 ? DZ.marginWide : 24.0,
-          1.0,
-        ),
+        w >= 1920
+            ? 10
+            : w >= 1440
+            ? 8
+            : w >= 1100
+            ? 6
+            : w >= 760
+            ? 5
+            : 4,
+        w >= 1100 ? DZ.marginWide : 24.0,
+        1.0,
+      ),
       // Fingers: four columns on a phone, six on a tablet.
       Hands.touch => (
-          w >= 900
-              ? 6
-              : w >= 600
-                  ? 5
-                  : 4,
-          w >= 600 ? 24.0 : DZ.margin,
-          w >= 600 ? 1.08 : 1.0,
-        ),
+        w >= 900
+            ? 6
+            : w >= 600
+            ? 5
+            : 4,
+        w >= 600 ? 24.0 : DZ.margin,
+        w >= 600 ? 1.08 : 1.0,
+      ),
     };
 
     return Layout(

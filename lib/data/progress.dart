@@ -28,17 +28,17 @@ class Progress {
   double get ratio => done
       ? 1
       : duration > 0
-          ? (position / duration).clamp(0.0, 1.0)
-          : 0.0;
+      ? (position / duration).clamp(0.0, 1.0)
+      : 0.0;
 
   double get remaining => (duration - position).clamp(0, double.infinity);
 
   Map<String, Object?> toJson() => {
-        'position': position,
-        'duration': duration,
-        'at': at,
-        if (done) 'done': true,
-      };
+    'position': position,
+    'duration': duration,
+    'at': at,
+    if (done) 'done': true,
+  };
 
   static Progress? fromJson(Object? j) {
     if (j is! Map) return null;
@@ -87,7 +87,8 @@ String progressKey(String subjectId, [EpisodeRef? ep]) =>
 /// One rule for "watched": inside the last 4%, or the last 15 seconds,
 /// whichever is longer — i.e. the credits are rolling.
 bool isWatchedAt(double position, double duration) =>
-    duration > 0 && position >= duration - (15.0 > duration * 0.04 ? 15.0 : duration * 0.04);
+    duration > 0 &&
+    position >= duration - (15.0 > duration * 0.04 ? 15.0 : duration * 0.04);
 
 /// Live map of every known resume point, so an episode tile's progress bar and
 /// a Continue button update the moment the player saves — no reload, no
@@ -103,12 +104,18 @@ class ProgressNotifier extends Notifier<Map<String, Progress>> {
     return out;
   }
 
-  Progress? of(String subjectId, [EpisodeRef? ep]) => state[progressKey(subjectId, ep)];
+  Progress? of(String subjectId, [EpisodeRef? ep]) =>
+      state[progressKey(subjectId, ep)];
 
   /// Save a position. Watched to the end → keep a `done` marker so the episode
   /// shows as finished and Continue moves on. Barely started → forget it, so a
   /// mis-tap does not litter the library.
-  void save(String subjectId, EpisodeRef? ep, double position, double duration) {
+  void save(
+    String subjectId,
+    EpisodeRef? ep,
+    double position,
+    double duration,
+  ) {
     final key = progressKey(subjectId, ep);
     final done = isWatchedAt(position, duration);
     final now = DateTime.now().millisecondsSinceEpoch;
@@ -116,8 +123,8 @@ class ProgressNotifier extends Notifier<Map<String, Progress>> {
     final Progress? value = done
         ? Progress(position: duration, duration: duration, at: now, done: true)
         : position < 5
-            ? null
-            : Progress(position: position, duration: duration, at: now);
+        ? null
+        : Progress(position: position, duration: duration, at: now);
 
     final next = Map<String, Progress>.from(state);
     if (value == null) {
@@ -146,7 +153,9 @@ class ProgressNotifier extends Notifier<Map<String, Progress>> {
 }
 
 final progressProvider =
-    NotifierProvider<ProgressNotifier, Map<String, Progress>>(ProgressNotifier.new);
+    NotifierProvider<ProgressNotifier, Map<String, Progress>>(
+      ProgressNotifier.new,
+    );
 
 /// Read a resume point from outside the widget tree.
 Progress? readProgress(String subjectId, [EpisodeRef? ep]) =>

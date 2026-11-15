@@ -51,8 +51,7 @@ class PauseOverlay extends StatelessWidget {
       Hands.remote => l.size.width * 0.42,
       Hands.pointer => l.size.width * 0.38,
       Hands.touch => l.size.width * 0.52,
-    }
-        .clamp(280.0, 620.0);
+    }.clamp(280.0, 620.0);
 
     return IgnorePointer(
       ignoring: !visible,
@@ -77,7 +76,10 @@ class PauseOverlay extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('paused', style: l.t(DZ.label).copyWith(color: DZ.cyan)),
+                    Text(
+                      'paused',
+                      style: l.t(DZ.label).copyWith(color: DZ.cyan),
+                    ),
                     const SizedBox(height: 10),
                     Text(
                       s.cleanTitle.toLowerCase(),
@@ -120,14 +122,18 @@ class PauseOverlay extends StatelessWidget {
 
                     if (cast.isNotEmpty) ...[
                       const SizedBox(height: 22),
-                      Text('cast', style: l.t(DZ.label).copyWith(color: DZ.cyan)),
+                      Text(
+                        'cast',
+                        style: l.t(DZ.label).copyWith(color: DZ.cyan),
+                      ),
                       const SizedBox(height: 10),
                       SizedBox(
                         height: l.isTV ? 128 : 96,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: cast.length,
-                          separatorBuilder: (_, _) => const SizedBox(width: DZ.gap),
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(width: DZ.gap),
                           itemBuilder: (context, i) {
                             final p = cast[i];
                             final side = l.isTV ? 78.0 : 62.0;
@@ -138,12 +144,17 @@ class PauseOverlay extends StatelessWidget {
                                 children: [
                                   SizedBox(
                                     height: side,
-                                    child: Art(url: p.avatarUrl, fallbackTitle: p.name),
+                                    child: Art(
+                                      url: p.avatarUrl,
+                                      fallbackTitle: p.name,
+                                    ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     p.name.toLowerCase(),
-                                    style: l.t(DZ.caption).copyWith(color: DZ.white),
+                                    style: l
+                                        .t(DZ.caption)
+                                        .copyWith(color: DZ.white),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),

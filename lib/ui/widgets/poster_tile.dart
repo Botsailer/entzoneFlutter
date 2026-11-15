@@ -299,11 +299,14 @@ class DownloadTile extends StatelessWidget {
     final (Color bar, String state) = switch (item.status) {
       DownloadStatus.done => (DZ.lime, 'ready'),
       DownloadStatus.downloading => (
-          DZ.magenta,
-          '${formatBytes(item.received)} of ${formatBytes(item.total)}'
-              '${item.bytesPerSecond > 0 ? '  ·  ${formatSpeed(item.bytesPerSecond)}' : ''}'
-        ),
-      DownloadStatus.paused => (DZ.grey2, 'paused  ·  ${formatBytes(item.received)}'),
+        DZ.magenta,
+        '${formatBytes(item.received)} of ${formatBytes(item.total)}'
+            '${item.bytesPerSecond > 0 ? '  ·  ${formatSpeed(item.bytesPerSecond)}' : ''}',
+      ),
+      DownloadStatus.paused => (
+        DZ.grey2,
+        'paused  ·  ${formatBytes(item.received)}',
+      ),
       DownloadStatus.queued => (DZ.grey2, 'waiting'),
       DownloadStatus.failed => (DZ.red, item.error ?? 'failed'),
     };
@@ -315,7 +318,10 @@ class DownloadTile extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Art(url: item.subject.cover?.url, fallbackTitle: item.subject.cleanTitle),
+          Art(
+            url: item.subject.cover?.url,
+            fallbackTitle: item.subject.cleanTitle,
+          ),
           Positioned(
             left: 0,
             right: 0,
@@ -334,9 +340,16 @@ class DownloadTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    item.isEpisode ? 's${item.se} · e${item.ep}  ·  $state' : state,
-                    style: l.t(DZ.caption).copyWith(
-                        color: item.status == DownloadStatus.failed ? DZ.red : DZ.grey1),
+                    item.isEpisode
+                        ? 's${item.se} · e${item.ep}  ·  $state'
+                        : state,
+                    style: l
+                        .t(DZ.caption)
+                        .copyWith(
+                          color: item.status == DownloadStatus.failed
+                              ? DZ.red
+                              : DZ.grey1,
+                        ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

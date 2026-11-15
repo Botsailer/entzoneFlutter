@@ -15,6 +15,7 @@ class MediaProxy {
   final _sources = <String, _MediaSource>{};
   HttpServer? _server;
   Future<HttpServer>? _starting;
+  bool _closed = false;
 
   int? lastUpstreamStatus;
 
@@ -23,6 +24,7 @@ class MediaProxy {
     required Map<String, String> headers,
     Future<RefreshedMedia?> Function()? refresh,
   }) async {
+    if (_closed) throw const HttpException('Media proxy is closed');
     final uri = Uri.parse(url);
     if (uri.scheme != 'https' &&
         !(uri.scheme == 'http' && uri.host == '127.0.0.1')) {
@@ -136,8 +138,13 @@ class MediaProxy {
       status == 429;
 
   void close() {
+    if (_closed) return;
+    _closed = true;
     _sources.clear();
-    _server?.close(force: true);
+    final server = _server;
+    _server = null;
+    _starting = null;
+    unawaited(server?.close(force: true) ?? Future<void>.value());
     _client.close(force: true);
   }
 }

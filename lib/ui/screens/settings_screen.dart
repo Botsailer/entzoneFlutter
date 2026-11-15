@@ -54,7 +54,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         Expanded(
           child: Pivot(
-            labels: const ['playback', 'subtitles', 'downloads', 'storage', 'about'],
+            labels: const [
+              'playback',
+              'subtitles',
+              'downloads',
+              'storage',
+              'about',
+            ],
             index: _pane,
             onChanged: (i) => setState(() => _pane = i),
             padding: pad,
@@ -64,10 +70,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               1 => _SubtitlePane(padding: pad),
               2 => _DownloadPane(padding: pad),
               3 => _StoragePane(
-                  padding: pad,
-                  cacheBytes: _cacheBytes,
-                  onCleared: _measureCache,
-                ),
+                padding: pad,
+                cacheBytes: _cacheBytes,
+                onCleared: _measureCache,
+              ),
               _ => _AboutPane(padding: pad),
             },
           ),
@@ -92,7 +98,8 @@ class _PlaybackPane extends ConsumerWidget {
       children: [
         _Choice<StreamQualityPref>(
           label: 'streaming quality',
-          detail: 'the player starts on the closest rendition at or below this. '
+          detail:
+              'the player starts on the closest rendition at or below this. '
               'you can still change it mid-video without losing your place.',
           value: s.streamQuality,
           options: StreamQualityPref.values,
@@ -102,7 +109,8 @@ class _PlaybackPane extends ConsumerWidget {
         ),
         _Choice<int>(
           label: 'skip by',
-          detail: 'used by the skip buttons, a double tap on the picture, the '
+          detail:
+              'used by the skip buttons, a double tap on the picture, the '
               'arrow keys, and the remote.',
           value: s.skipSeconds,
           options: Settings.skipChoices,
@@ -111,7 +119,8 @@ class _PlaybackPane extends ConsumerWidget {
         ),
         _Choice<double>(
           label: 'speed while holding',
-          detail: 'press and hold anywhere on the picture to run at this speed, '
+          detail:
+              'press and hold anywhere on the picture to run at this speed, '
               'release to go back.',
           value: s.longPressSpeed,
           options: Settings.speedChoices,
@@ -120,21 +129,24 @@ class _PlaybackPane extends ConsumerWidget {
         ),
         _Toggle(
           label: 'play the next episode automatically',
-          detail: 'when an episode ends, the next one starts. the player has '
+          detail:
+              'when an episode ends, the next one starts. the player has '
               'the same switch on its bar.',
           value: s.autoplayNext,
           onChanged: (v) => n.update((x) => x.copyWith(autoplayNext: v)),
         ),
         _Toggle(
           label: 'load the next episode early',
-          detail: 'resolves and buffers the next episode while this one plays, '
+          detail:
+              'resolves and buffers the next episode while this one plays, '
               'so next is instant. uses a little more data.',
           value: s.preloadNext,
           onChanged: (v) => n.update((x) => x.copyWith(preloadNext: v)),
         ),
         _Toggle(
           label: 'show cast and story when paused',
-          detail: 'a paused frame answers "who is that?" instead of just '
+          detail:
+              'a paused frame answers "who is that?" instead of just '
               'sitting there.',
           value: s.pauseDetails,
           onChanged: (v) => n.update((x) => x.copyWith(pauseDetails: v)),
@@ -142,14 +154,16 @@ class _PlaybackPane extends ConsumerWidget {
         if (Device.i.supportsAutoPip)
           _Toggle(
             label: 'shrink to a corner when i leave',
-            detail: 'leaving the app mid-video keeps the picture in a small '
+            detail:
+                'leaving the app mid-video keeps the picture in a small '
                 'window. android 12 and later.',
             value: s.autoPip,
             onChanged: (v) => n.update((x) => x.copyWith(autoPip: v)),
           ),
         _Toggle(
           label: 'keep the sound going in the background',
-          detail: 'audio continues when the app is not on screen and not in a '
+          detail:
+              'audio continues when the app is not on screen and not in a '
               'corner window.',
           value: s.backgroundPlay,
           onChanged: (v) => n.update((x) => x.copyWith(backgroundPlay: v)),
@@ -258,7 +272,8 @@ class _DownloadPane extends ConsumerWidget {
         ),
         _Toggle(
           label: 'ask every time',
-          detail: 'shows the real file size of each rendition before the '
+          detail:
+              'shows the real file size of each rendition before the '
               'download starts.',
           value: s.askDownloadQuality,
           onChanged: (v) => n.update((x) => x.copyWith(askDownloadQuality: v)),
@@ -281,7 +296,9 @@ class _DownloadPane extends ConsumerWidget {
                 if (context.mounted) {
                   notify(
                     context,
-                    ok ? 'notifications allowed' : 'notifications are blocked in system settings',
+                    ok
+                        ? 'notifications allowed'
+                        : 'notifications are blocked in system settings',
                     fill: ok ? DZ.white : DZ.amber,
                   );
                 }
@@ -307,7 +324,8 @@ class _StoragePane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = Layout.of(context);
-    final downloads = ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
+    final downloads =
+        ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
     final onDisk = downloads
         .where((d) => d.status == DownloadStatus.done)
         .fold<int>(0, (a, b) => a + b.total);
@@ -322,7 +340,9 @@ class _StoragePane extends ConsumerWidget {
             TileSpan(
               child: CountTile(
                 label: 'downloaded',
-                count: downloads.where((d) => d.status == DownloadStatus.done).length,
+                count: downloads
+                    .where((d) => d.status == DownloadStatus.done)
+                    .length,
                 fill: DZ.magenta,
                 caption: formatBytes(onDisk),
                 onTap: () => Nav.openLibrary(context, LibraryTab.downloads),
@@ -360,13 +380,13 @@ class _StoragePane extends ConsumerWidget {
           label: 'delete every download',
           icon: Icons.delete_outline,
           chevron: false,
-          fill: DZ.red,
-          primary: true,
+          danger: true,
           onPressed: () async {
             final ok = await _confirm(
               context,
               title: 'delete every download?',
-              body: 'All ${downloads.length} files (${formatBytes(onDisk)}) are '
+              body:
+                  'All ${downloads.length} files (${formatBytes(onDisk)}) are '
                   'removed from this device. You can download them again later.',
               confirm: 'delete them',
             );
@@ -380,11 +400,16 @@ class _StoragePane extends ConsumerWidget {
           label: 'reset everything',
           icon: Icons.restart_alt,
           chevron: false,
+          // The only action here that cannot be undone, so it is the only one
+          // that takes the solid red.
+          fill: DZ.red,
+          primary: true,
           onPressed: () async {
             final ok = await _confirm(
               context,
               title: 'reset the app?',
-              body: 'Forgets your list, history, watch positions, settings and '
+              body:
+                  'Forgets your list, history, watch positions, settings and '
                   'the cache, and deletes downloads. This cannot be undone.',
               confirm: 'reset everything',
             );
@@ -434,18 +459,20 @@ class _AboutPane extends StatelessWidget {
         const SizedBox(height: 30),
         Text('how it is driven here', style: l.t(DZ.subtitle)),
         const SizedBox(height: 12),
-        const _Keys(rows: [
-          ('space  ·  k', 'play or pause'),
-          ('← →', 'skip by your interval'),
-          ('j  ·  l', 'jump ten seconds'),
-          ('↑ ↓', 'volume'),
-          ('m', 'mute'),
-          ('f', 'cycle fit, fill, stretch'),
-          ('c  ·  a  ·  q', 'subtitles, audio, quality'),
-          ('n', 'next episode'),
-          ('esc', 'close the player'),
-          ('[  ·  ]', 'previous or next season'),
-        ]),
+        const _Keys(
+          rows: [
+            ('space  ·  k', 'play or pause'),
+            ('← →', 'skip by your interval'),
+            ('j  ·  l', 'jump ten seconds'),
+            ('↑ ↓', 'volume'),
+            ('m', 'mute'),
+            ('f', 'cycle fit, fill, stretch'),
+            ('c  ·  a  ·  q', 'subtitles, audio, quality'),
+            ('n', 'next episode'),
+            ('esc', 'close the player'),
+            ('[  ·  ]', 'previous or next season'),
+          ],
+        ),
         const SizedBox(height: 26),
         const Text(
           'on a television the d-pad moves between tiles, select plays, the '
@@ -464,21 +491,26 @@ class _Keys extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final (key, what) in rows)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 9),
-              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                SizedBox(
-                  width: 128,
-                  child: Text(key, style: DZ.caption.copyWith(color: DZ.cyan)),
-                ),
-                Expanded(child: Text(what, style: DZ.caption.copyWith(color: DZ.white))),
-              ]),
-            ),
-        ],
-      );
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      for (final (key, what) in rows)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 9),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: 128,
+                child: Text(key, style: DZ.caption.copyWith(color: DZ.cyan)),
+              ),
+              Expanded(
+                child: Text(what, style: DZ.caption.copyWith(color: DZ.white)),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
 }
 
 // ───────────────────────── rows ─────────────────────────
@@ -525,7 +557,11 @@ class _Toggle extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 16),
-              Switch(value: value, onChanged: onChanged),
+              MetroSwitch(
+                value: value,
+                onChanged: onChanged,
+                semanticLabel: label,
+              ),
             ],
           ),
         ),
@@ -622,10 +658,12 @@ class _Slider extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Expanded(child: Text(label, style: l.t(DZ.body))),
-            Text(display, style: l.t(DZ.caption).copyWith(color: DZ.cyan)),
-          ]),
+          Row(
+            children: [
+              Expanded(child: Text(label, style: l.t(DZ.body))),
+              Text(display, style: l.t(DZ.caption).copyWith(color: DZ.cyan)),
+            ],
+          ),
           Slider(
             value: value.clamp(min, max),
             min: min,
@@ -644,28 +682,27 @@ Future<bool?> _confirm(
   required String title,
   required String body,
   required String confirm,
-}) =>
-    showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: DZ.black,
-        title: Text(title, style: DZ.subtitle),
-        content: Text(body, style: DZ.body),
-        actions: [
-          MetroButton(
-            label: 'cancel',
-            chevron: false,
-            dense: true,
-            onPressed: () => Navigator.pop(ctx, false),
-          ),
-          MetroButton(
-            label: confirm,
-            chevron: false,
-            dense: true,
-            primary: true,
-            fill: DZ.red,
-            onPressed: () => Navigator.pop(ctx, true),
-          ),
-        ],
+}) => showDialog<bool>(
+  context: context,
+  builder: (ctx) => AlertDialog(
+    backgroundColor: DZ.black,
+    title: Text(title, style: DZ.subtitle),
+    content: Text(body, style: DZ.body),
+    actions: [
+      MetroButton(
+        label: 'cancel',
+        chevron: false,
+        dense: true,
+        onPressed: () => Navigator.pop(ctx, false),
       ),
-    );
+      MetroButton(
+        label: confirm,
+        chevron: false,
+        dense: true,
+        primary: true,
+        fill: DZ.red,
+        onPressed: () => Navigator.pop(ctx, true),
+      ),
+    ],
+  ),
+);

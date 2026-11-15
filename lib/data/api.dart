@@ -215,12 +215,13 @@ class Api {
       return await _raw<T>(path, body: body);
     } on ApiError catch (e) {
       final s = e.status;
-      // Any 4xx: the token is stale. Re-issue and retry exactly once.
-      if (s != null && s >= 400 && s < 500) {
-        _token = null;
-        await Store.i.remove(_tokenKey);
-        await _ensureToken();
-      }
+      // Only a 4xx means a stale token (the API answers 400, 401 *or* 403).
+      // Anything else — a timeout, a 5xx, a well-formed error body — is the
+      // server's real answer, and resending it would only double the load.
+      if (s == null || s < 400 || s >= 500) rethrow;
+      _token = null;
+      await Store.i.remove(_tokenKey);
+      await _ensureToken();
       return _raw<T>(path, body: body);
     }
   }
@@ -242,6 +243,11 @@ class Api {
     } catch (_) {
       return null;
     }
+  }
+
+  void _forgetCache(String key) {
+    _memory.remove(key);
+    Store.i.remove('api:cache:$key');
   }
 
   void _writeCache(String key, Object? data, bool persist) {
@@ -276,13 +282,29 @@ class Api {
     final age = hit == null
         ? null
         : DateTime.now().millisecondsSinceEpoch - hit.at;
-    if (hit != null && age! < maxAge.inMilliseconds) return parse(hit.data);
+    if (hit != null && age! < maxAge.inMilliseconds) {
+      try {
+        return parse(hit.data);
+      } catch (_) {
+        // A cached body this build can no longer read is worse than none.
+        _forgetCache(key);
+      }
+    }
     try {
       final data = await fetch();
+      // Parse first: a body that cannot be read must never be cached, or one
+      // bad answer keeps failing for the whole TTL.
+      final parsed = parse(data);
       _writeCache(key, data, persist);
-      return parse(data);
+      return parsed;
     } catch (e) {
-      if (hit != null) return parse(hit.data); // offline → serve stale
+      // Offline → serve stale, but never let a stale-parse failure hide the
+      // real reason the fetch failed.
+      if (hit != null) {
+        try {
+          return parse(hit.data);
+        } catch (_) {}
+      }
       rethrow;
     }
   }
@@ -500,7 +522,7 @@ class Api {
               (s) => PlayStream(
                 url: s['url'].toString(),
                 resolution: s['resolutions']?.toString() ?? '',
-                height: int.tryParse(s['resolutions']?.toString() ?? '') ?? 0,
+                height: _height(s['resolutions']),
                 duration:
                     num.tryParse(s['duration']?.toString() ?? '')?.toInt() ?? 0,
                 codec: s['codecName']?.toString() ?? '',
@@ -521,6 +543,14 @@ class Api {
     if (_playCache.length > 64) _playCache.clear();
     _playCache[key] = (at: DateTime.now().millisecondsSinceEpoch, value: value);
     return value;
+  }
+
+  /// Renditions come back as `1080`, `1080p` or `1080P` depending on the
+  /// title, and a plain parse of the last two yields 0 — which sorted the
+  /// best stream last and labelled it "auto".
+  static int _height(Object? raw) {
+    final digits = RegExp(r'\d+').firstMatch(raw?.toString() ?? '')?.group(0);
+    return int.tryParse(digits ?? '') ?? 0;
   }
 
   /// Drop every cached response. The session token survives.

@@ -61,7 +61,10 @@ class Native {
 
   // ───────────────────────── picture in picture ─────────────────────────
 
-  Future<bool> enterPip({double aspectWidth = 16, double aspectHeight = 9}) async =>
+  Future<bool> enterPip({
+    double aspectWidth = 16,
+    double aspectHeight = 9,
+  }) async =>
       await _call<bool>('enterPip', {
         'width': aspectWidth.round(),
         'height': aspectHeight.round(),
@@ -70,12 +73,15 @@ class Native {
 
   /// Arm automatic PiP, so leaving the app mid-video keeps the picture
   /// (Android 12+). Disarmed whenever the player is not on screen.
-  Future<void> setAutoPip(bool enabled, {double aspectWidth = 16, double aspectHeight = 9}) =>
-      _call('setAutoPip', {
-        'enabled': enabled,
-        'width': aspectWidth.round(),
-        'height': aspectHeight.round(),
-      });
+  Future<void> setAutoPip(
+    bool enabled, {
+    double aspectWidth = 16,
+    double aspectHeight = 9,
+  }) => _call('setAutoPip', {
+    'enabled': enabled,
+    'width': aspectWidth.round(),
+    'height': aspectHeight.round(),
+  });
 
   // ───────────────────────── media session ─────────────────────────
 
@@ -89,33 +95,39 @@ class Native {
     required Duration position,
     required Duration duration,
     required bool hasNext,
-  }) =>
-      _call('setNowPlaying', {
-        'title': title,
-        'subtitle': subtitle,
-        'artwork': artworkUrl,
-        'playing': playing,
-        'position': position.inMilliseconds,
-        'duration': duration.inMilliseconds,
-        'hasNext': hasNext,
-      });
+  }) => _call('setNowPlaying', {
+    'title': title,
+    'subtitle': subtitle,
+    'artwork': artworkUrl,
+    'playing': playing,
+    'position': position.inMilliseconds,
+    'duration': duration.inMilliseconds,
+    'hasNext': hasNext,
+  });
 
   Future<void> clearNowPlaying() => _call('clearNowPlaying');
 
   /// While true, the activity keeps media keys and asks the system not to
   /// sleep the session.
-  Future<void> setPlayerActive(bool active) => _call('setPlayerActive', {'active': active});
+  Future<void> setPlayerActive(bool active) =>
+      _call('setPlayerActive', {'active': active});
 
   // ───────────────────────── download service ─────────────────────────
 
-  Future<void> startDownloadService({required String title, required String subtitle}) =>
-      _call('startDownloadService', {'title': title, 'subtitle': subtitle});
+  Future<void> startDownloadService({
+    required String title,
+    required String subtitle,
+  }) => _call('startDownloadService', {'title': title, 'subtitle': subtitle});
 
-  Future<void> updateDownloadProgress({required String title, required int percent}) =>
-      _call('updateDownloadProgress', {'title': title, 'percent': percent});
+  Future<void> updateDownloadProgress({
+    required String title,
+    required int percent,
+  }) => _call('updateDownloadProgress', {'title': title, 'percent': percent});
 
-  Future<void> notifyDownloadComplete({required String title, required String subtitle}) =>
-      _call('notifyDownloadComplete', {'title': title, 'subtitle': subtitle});
+  Future<void> notifyDownloadComplete({
+    required String title,
+    required String subtitle,
+  }) => _call('notifyDownloadComplete', {'title': title, 'subtitle': subtitle});
 
   Future<void> stopDownloadService() => _call('stopDownloadService');
 

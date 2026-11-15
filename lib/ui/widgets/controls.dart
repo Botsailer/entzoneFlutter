@@ -20,6 +20,7 @@ class MetroButton extends StatefulWidget {
     this.autofocus = false,
     this.expand = false,
     this.dense = false,
+    this.danger = false,
   });
 
   final String label;
@@ -34,6 +35,12 @@ class MetroButton extends StatefulWidget {
   final bool autofocus;
   final bool expand;
   final bool dense;
+
+  /// Marks an outlined button destructive: it takes the red of the ladder
+  /// instead of white. Gives severity three legible steps — a white outline
+  /// for an ordinary action, a red outline for a destructive one, a red fill
+  /// for the one that cannot be undone.
+  final bool danger;
 
   @override
   State<MetroButton> createState() => _MetroButtonState();
@@ -60,17 +67,18 @@ class _MetroButtonState extends State<MetroButton> {
       fg = enabled ? inkOn(fill) : DZ.grey3;
       border = _focused ? DZ.white : null;
     } else {
+      final rest = widget.danger ? DZ.red : DZ.white;
       bg = Colors.transparent;
       fg = !enabled
           ? DZ.grey3
           : _focused
-              ? DZ.cyan
-              : DZ.white;
+          ? DZ.cyan
+          : rest;
       border = !enabled
           ? DZ.grey3
           : _focused
-              ? DZ.cyan
-              : DZ.white;
+          ? DZ.cyan
+          : rest;
     }
 
     final height = (widget.dense ? 38.0 : DZ.control) * (l.isTV ? 1.25 : 1.0);
@@ -84,12 +92,16 @@ class _MetroButtonState extends State<MetroButton> {
         color: _down && enabled && widget.primary ? _pressed(fill) : bg,
         border: border == null
             ? null
-            : Border.all(color: border, width: _focused && l.isTV ? 3 : DZ.hairline),
+            : Border.all(
+                color: border,
+                width: _focused && l.isTV ? 3 : DZ.hairline,
+              ),
       ),
       child: Row(
         mainAxisSize: widget.expand ? MainAxisSize.max : MainAxisSize.min,
-        mainAxisAlignment:
-            widget.expand ? MainAxisAlignment.spaceBetween : MainAxisAlignment.start,
+        mainAxisAlignment: widget.expand
+            ? MainAxisAlignment.spaceBetween
+            : MainAxisAlignment.start,
         children: [
           Row(
             mainAxisSize: MainAxisSize.min,
@@ -101,7 +113,9 @@ class _MetroButtonState extends State<MetroButton> {
               Flexible(
                 child: Text(
                   widget.label.toLowerCase(),
-                  style: l.t(widget.dense ? DZ.caption : DZ.body).copyWith(
+                  style: l
+                      .t(widget.dense ? DZ.caption : DZ.body)
+                      .copyWith(
                         color: fg,
                         fontVariations: const [FontVariation('wght', 600)],
                       ),
@@ -128,12 +142,16 @@ class _MetroButtonState extends State<MetroButton> {
         autofocus: widget.autofocus,
         onShowFocusHighlight: (v) => setState(() => _focused = v),
         onShowHoverHighlight: (v) => setState(() => _hovered = v),
-        mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        mouseCursor: enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-            widget.onPressed?.call();
-            return null;
-          }),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onPressed?.call();
+              return null;
+            },
+          ),
         },
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
@@ -152,8 +170,8 @@ class _MetroButtonState extends State<MetroButton> {
     );
   }
 
-  /// Pressed state lightens the fill by one fixed step — not a computed tint.
-  Color _pressed(Color c) => Color.alphaBlend(const Color(0x33FFFFFF), c);
+  /// Pressed state lightens the fill by the one declared step.
+  Color _pressed(Color c) => Color.alphaBlend(DZ.pressWash, c);
 }
 
 /// A compact square control: the icon buttons in the nav rail and on the player
@@ -202,17 +220,17 @@ class _MetroIconButtonState extends State<MetroIconButton> {
     final fg = !enabled
         ? DZ.grey3
         : on
-            ? inkOn(widget.activeColor)
-            : _focused || _hovered
-                ? DZ.cyan
-                : DZ.white;
+        ? inkOn(widget.activeColor)
+        : _focused || _hovered
+        ? DZ.cyan
+        : DZ.white;
     final border = !enabled
         ? DZ.grey3
         : _focused
-            ? DZ.cyan
-            : on
-                ? widget.activeColor
-                : DZ.white;
+        ? DZ.cyan
+        : on
+        ? widget.activeColor
+        : DZ.white;
 
     return Tooltip(
       message: widget.tooltip,
@@ -226,12 +244,16 @@ class _MetroIconButtonState extends State<MetroIconButton> {
           autofocus: widget.autofocus,
           onShowFocusHighlight: (v) => setState(() => _focused = v),
           onShowHoverHighlight: (v) => setState(() => _hovered = v),
-          mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+          mouseCursor: enabled
+              ? SystemMouseCursors.click
+              : SystemMouseCursors.basic,
           actions: {
-            ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-              widget.onPressed?.call();
-              return null;
-            }),
+            ActivateIntent: CallbackAction<ActivateIntent>(
+              onInvoke: (_) {
+                widget.onPressed?.call();
+                return null;
+              },
+            ),
           },
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -249,7 +271,10 @@ class _MetroIconButtonState extends State<MetroIconButton> {
               decoration: BoxDecoration(
                 color: bg,
                 border: widget.outlined
-                    ? Border.all(color: border, width: _focused ? 2 : DZ.hairline)
+                    ? Border.all(
+                        color: border,
+                        width: _focused ? 2 : DZ.hairline,
+                      )
                     : null,
               ),
               child: Stack(
@@ -260,7 +285,11 @@ class _MetroIconButtonState extends State<MetroIconButton> {
                     Positioned(
                       right: 4,
                       top: 4,
-                      child: Container(width: 7, height: 7, color: widget.badge),
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        color: widget.badge,
+                      ),
                     ),
                 ],
               ),
@@ -337,7 +366,11 @@ class _MetroFieldState extends State<MetroField> {
       child: Row(
         children: [
           if (widget.leading != null) ...[
-            Icon(widget.leading, size: 18, color: _focused ? DZ.cyan : DZ.grey1),
+            Icon(
+              widget.leading,
+              size: 18,
+              color: _focused ? DZ.cyan : DZ.grey1,
+            ),
             const SizedBox(width: 9),
           ],
           Expanded(
@@ -478,12 +511,19 @@ class StateBlock extends StatelessWidget {
               // Body measure stays readable instead of running the full width
               // of a 4K TV.
               constraints: const BoxConstraints(maxWidth: 560),
-              child: Text(detail!, style: l.t(DZ.body).copyWith(color: DZ.grey1)),
+              child: Text(
+                detail!,
+                style: l.t(DZ.body).copyWith(color: DZ.grey1),
+              ),
             ),
           ],
           if (actionLabel != null && onAction != null) ...[
             const SizedBox(height: 20),
-            MetroButton(label: actionLabel!, onPressed: onAction, primary: true),
+            MetroButton(
+              label: actionLabel!,
+              onPressed: onAction,
+              primary: true,
+            ),
           ],
         ],
       ),
@@ -499,17 +539,148 @@ class LoadingBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 46),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (label != null) ...[
-              Text(label!.toLowerCase(), style: DZ.caption),
-              const SizedBox(height: 14),
-            ],
-            const MetroLoading(),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 46),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (label != null) ...[
+          Text(label!.toLowerCase(), style: DZ.caption),
+          const SizedBox(height: 14),
+        ],
+        const MetroLoading(),
+      ],
+    ),
+  );
+}
+
+/// The toggle, drawn in this world's own vocabulary.
+///
+/// Material's Switch is a pill with a circular thumb — the only rounded thing
+/// in an app whose system states there is no corner radius anywhere. This is
+/// the Metro toggle instead: a 1px outlined rectangle that fills with the
+/// live-state colour when it is on, and a square thumb that slides between
+/// the two ends. Off is an outline on black; on is a saturated fill. There is
+/// no third surface, which is the rule.
+class MetroSwitch extends StatefulWidget {
+  const MetroSwitch({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.semanticLabel,
+  });
+
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+  final String? semanticLabel;
+
+  @override
+  State<MetroSwitch> createState() => _MetroSwitchState();
+}
+
+class _MetroSwitchState extends State<MetroSwitch> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = Layout.of(context);
+    final enabled = widget.onChanged != null;
+    final on = widget.value;
+    final reduced = reducedMotion(context);
+
+    final scale = l.isTV ? 1.3 : 1.0;
+    final trackW = 46.0 * scale;
+    final trackH = 20.0 * scale;
+    final thumb = 12.0 * scale;
+    const inset = 3.0;
+
+    final Color track = !enabled
+        ? DZ.grey4
+        : on
+        ? DZ.cyan
+        : Colors.transparent;
+    final Color edge = !enabled
+        ? DZ.grey3
+        : _focused
+        ? DZ.white
+        : on
+        ? DZ.cyan
+        : DZ.grey1;
+    // On the cyan fill the thumb must be the ink that reads on it; on black it
+    // is the ink of the ground.
+    final Color pip = !enabled
+        ? DZ.grey3
+        : on
+        ? inkOn(DZ.cyan)
+        : DZ.white;
+
+    return Semantics(
+      toggled: on,
+      label: widget.semanticLabel,
+      child: FocusableActionDetector(
+        enabled: enabled,
+        onShowFocusHighlight: (v) => setState(() => _focused = v),
+        mouseCursor: enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
+        actions: {
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              widget.onChanged?.call(!on);
+              return null;
+            },
+          ),
+        },
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: enabled
+              ? () {
+                  HapticFeedback.selectionClick();
+                  widget.onChanged!(!on);
+                }
+              : null,
+          // The drawn control is 20px tall; the target around it clears the
+          // 48dp touch floor.
+          child: SizedBox(
+            height: DZ.control,
+            width: trackW,
+            child: Center(
+              child: AnimatedContainer(
+                duration: reduced ? Duration.zero : DZ.stateChange,
+                curve: DZ.ease,
+                width: trackW,
+                height: trackH,
+                decoration: BoxDecoration(
+                  color: track,
+                  border: Border.all(
+                    color: edge,
+                    width: _focused ? 2 : DZ.hairline,
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    AnimatedAlign(
+                      duration: reduced ? Duration.zero : DZ.stateChange,
+                      curve: DZ.ease,
+                      alignment: on
+                          ? Alignment.centerRight
+                          : Alignment.centerLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: inset),
+                        child: SizedBox(
+                          width: thumb,
+                          height: thumb,
+                          child: ColoredBox(color: pip),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ),
-      );
+      ),
+    );
+  }
 }

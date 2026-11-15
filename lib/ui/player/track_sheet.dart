@@ -56,7 +56,15 @@ class TrackSheet extends StatelessWidget {
         child: Container(
           width: width.toDouble(),
           height: double.infinity,
-          color: const Color(0xF5000000),
+          // A surface in this world is a fill or a 1px outline on black —
+          // never a near-black of its own. The hairline is what separates the
+          // panel from the picture behind it.
+          decoration: const BoxDecoration(
+            color: DZ.black,
+            border: Border(
+              left: BorderSide(color: DZ.white, width: DZ.hairline),
+            ),
+          ),
           padding: EdgeInsets.only(
             top: 24 + l.overscan.top,
             bottom: 16 + l.overscan.bottom,
@@ -120,17 +128,17 @@ class _Close extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        button: true,
-        label: 'close',
-        child: GestureDetector(
-          onTap: onClose,
-          behavior: HitTestBehavior.opaque,
-          child: const Padding(
-            padding: EdgeInsets.all(8),
-            child: Icon(Icons.close, color: DZ.white, size: 22),
-          ),
-        ),
-      );
+    button: true,
+    label: 'close',
+    child: GestureDetector(
+      onTap: onClose,
+      behavior: HitTestBehavior.opaque,
+      child: const Padding(
+        padding: EdgeInsets.all(8),
+        child: Icon(Icons.close, color: DZ.white, size: 22),
+      ),
+    ),
+  );
 }
 
 class _Row extends StatefulWidget {
@@ -164,10 +172,12 @@ class _RowState extends State<_Row> {
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
-          return null;
-        }),
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap();
+            return null;
+          },
+        ),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -201,18 +211,22 @@ class _RowState extends State<_Row> {
                     children: [
                       Text(
                         o.label.toLowerCase(),
-                        style: l.t(DZ.body).copyWith(
-                          color: _focused ? inkOn(o.accent) : DZ.white,
-                          fontVariations: [FontVariation('wght', on ? 600 : 400)],
-                        ),
+                        style: l
+                            .t(DZ.body)
+                            .copyWith(
+                              color: _focused ? inkOn(o.accent) : DZ.white,
+                              fontVariations: [
+                                FontVariation('wght', on ? 600 : 400),
+                              ],
+                            ),
                       ),
                       if (o.detail != null)
                         Text(
                           o.detail!.toLowerCase(),
-                          style: l.t(DZ.caption).copyWith(
-                                color: _focused
-                                    ? inkOn(o.accent).withValues(alpha: 0.75)
-                                    : DZ.grey2,
+                          style: l
+                              .t(DZ.caption)
+                              .copyWith(
+                                color: _focused ? inkOn(o.accent) : DZ.grey2,
                               ),
                         ),
                     ],

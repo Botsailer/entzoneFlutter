@@ -49,6 +49,16 @@ flutter build web
 
 Browser CORS rules can limit catalog requests and media playback on the web target.
 
+### Windows installer
+
+Run this from PowerShell whenever you want a new Windows build:
+
+```powershell
+.\build-windows.ps1
+```
+
+The script builds the release app and creates one shareable setup EXE in `build/installer/`. It reads the version from `pubspec.yaml`, bundles the Flutter and media playback files, and includes the Microsoft Visual C++ runtime. Inno Setup 6 is required on the build PC; install it with `winget install --id JRSoftware.InnoSetup -e -s winget`. The recipient only needs the setup EXE.
+
 ## Project layout
 
 | Path | Purpose |

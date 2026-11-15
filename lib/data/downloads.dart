@@ -230,8 +230,13 @@ class Downloads {
     unawaited(_pump());
   }
 
-  String _pathFor(DownloadItem it) =>
-      '${_dir!.path}${Platform.pathSeparator}${it.fileName}';
+  String _pathFor(DownloadItem it) {
+    final dir = _dir;
+    if (dir == null) {
+      throw const FileSystemException('download storage is unavailable');
+    }
+    return '${dir.path}${Platform.pathSeparator}${it.fileName}';
+  }
 
   String _partPathFor(DownloadItem it) => '${_pathFor(it)}.part';
 
@@ -349,11 +354,13 @@ class Downloads {
       _cancel = null;
       _activeId = null;
     }
-    for (final p in [_pathFor(it), _partPathFor(it)]) {
-      try {
-        final f = File(p);
-        if (await f.exists()) await f.delete();
-      } catch (_) {}
+    if (_dir != null) {
+      for (final p in [_pathFor(it), _partPathFor(it)]) {
+        try {
+          final f = File(p);
+          if (await f.exists()) await f.delete();
+        } catch (_) {}
+      }
     }
     _items = _items.where((x) => x.id != id).toList();
     _publish();
@@ -452,6 +459,7 @@ class Downloads {
     if (res.statusCode == 403 ||
         res.statusCode == 404 ||
         res.statusCode == 410) {
+      await _discard(res);
       final fresh = await _reresolve(it);
       if (fresh == null) {
         throw ApiError('This download link expired and could not be renewed.');
@@ -469,12 +477,15 @@ class Downloads {
     }
 
     if (res.statusCode == 429) {
+      await _discard(res);
       throw ApiError(
         'The server is rate-limiting downloads. Try again in a minute.',
       );
     }
     if (res.statusCode != 200 && res.statusCode != 206) {
-      throw ApiError('The server refused the download (${res.statusCode}).');
+      final code = res.statusCode;
+      await _discard(res);
+      throw ApiError('The server refused the download ($code).');
     }
 
     final lenHeader = res.headers.value(Headers.contentLengthHeader);
@@ -498,6 +509,7 @@ class Downloads {
           _update(
             id,
             (i) => i.copyWith(received: received, bytesPerSecond: speed),
+            persist: false,
           );
           if (Device.i.hasDownloadService) {
             final cur = byId(id);
@@ -543,6 +555,14 @@ class Downloads {
     }
   }
 
+  /// Drain a response this transfer is not going to read, so its socket is
+  /// released instead of being held open until the timeout.
+  Future<void> _discard(Response<ResponseBody> res) async {
+    try {
+      await res.data?.stream.drain<void>();
+    } catch (_) {}
+  }
+
   Future<({String url, Map<String, String> headers})?> _reresolve(
     DownloadItem it,
   ) async {
@@ -580,14 +600,21 @@ class Downloads {
     return 'The download was interrupted. Resume to continue.';
   }
 
-  void _update(String id, DownloadItem Function(DownloadItem) change) {
+  /// [persist] is false for the twice-a-second progress tick: re-encoding the
+  /// whole queue to disk that often bought nothing, because the byte count is
+  /// recovered from the `.part` file's own length on the next launch.
+  void _update(
+    String id,
+    DownloadItem Function(DownloadItem) change, {
+    bool persist = true,
+  }) {
     var touched = false;
     _items = _items.map((i) {
       if (i.id != id) return i;
       touched = true;
       return change(i);
     }).toList();
-    if (touched) _publish();
+    if (touched) _publish(persist: persist);
   }
 
   void _publish({bool persist = true}) {

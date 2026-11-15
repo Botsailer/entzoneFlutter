@@ -60,6 +60,10 @@ class DZ {
   static const scrim = Color(0xCC000000);
   static const scrimLight = Color(0x80000000);
 
+  /// The one press step. A pressed fill lightens by exactly this much and no
+  /// other amount — declared here so no call site invents its own tint.
+  static const pressWash = Color(0x33FFFFFF);
+
   /// Accent for a given semantic role, so state colour is never hand-picked
   /// at a call site.
   static const accents = <Color>[cyan, magenta, lime, amber, red];
@@ -174,6 +178,7 @@ class DZ {
   );
 
   static const strongWeight = _w700;
+  static const semiboldWeight = _w600;
 
   // ───────────────────────── density ─────────────────────────
   // A strict grid. Metro's gutter is tight and its outer margin generous;
@@ -224,22 +229,37 @@ enum DZState { idle, live, stored, done, warn, failed }
 
 extension DZStateColor on DZState {
   Color get color => switch (this) {
-        DZState.idle => DZ.grey2,
-        DZState.live => DZ.cyan,
-        DZState.stored => DZ.magenta,
-        DZState.done => DZ.lime,
-        DZState.warn => DZ.amber,
-        DZState.failed => DZ.red,
-      };
+    DZState.idle => DZ.grey2,
+    DZState.live => DZ.cyan,
+    DZState.stored => DZ.magenta,
+    DZState.done => DZ.lime,
+    DZState.warn => DZ.amber,
+    DZState.failed => DZ.red,
+  };
 
   /// Ink that reads on this state's own fill.
   Color get ink => switch (this) {
-        DZState.done || DZState.warn => DZ.black,
-        _ => DZ.white,
-      };
+    DZState.live || DZState.done || DZState.warn => DZ.black,
+    _ => DZ.white,
+  };
 }
 
-/// Ink that reads on an arbitrary accent fill. Lime and amber are light enough
-/// that white fails on them; everything else takes white.
+/// Ink that reads on an arbitrary accent fill.
+///
+/// Measured, not guessed. Relative luminance of each fill against white and
+/// black ink, as WCAG computes it:
+///
+///   cyan #00BDE3  L .419 — white 2.24:1 ✗   black 9.4:1 ✓
+///   lime #A4E600  L .645 — white 1.49:1 ✗   black 13.9:1 ✓
+///   amber #FA6800 L .302 — white 2.98:1 ✗   black 7.0:1 ✓
+///   magenta #E6007E L .183 — white 4.50:1 ✓ black 4.7:1 ✓
+///   red #E51400   L .172 — white 4.74:1 ✓   black 4.4:1
+///
+/// Cyan sits *above* amber on that ladder, so the original rule — lime and
+/// amber take black, everything else white — put white ink on the app's
+/// primary accent at 2.24:1, failing AA on every primary button, every active
+/// nav item and every selected row. The three light fills take black.
 Color inkOn(Color fill) =>
-    (fill == DZ.lime || fill == DZ.amber) ? DZ.black : DZ.white;
+    (fill == DZ.cyan || fill == DZ.lime || fill == DZ.amber)
+    ? DZ.black
+    : DZ.white;

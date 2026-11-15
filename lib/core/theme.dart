@@ -67,8 +67,8 @@ ThemeData buildTheme() {
     ),
     scrollbarTheme: ScrollbarThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-        (s) => s.contains(WidgetState.dragged) ||
-                s.contains(WidgetState.hovered)
+        (s) =>
+            s.contains(WidgetState.dragged) || s.contains(WidgetState.hovered)
             ? DZ.cyan
             : DZ.grey3,
       ),
@@ -95,23 +95,28 @@ ThemeData buildTheme() {
     ),
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? DZ.white : DZ.grey2),
+        (s) => s.contains(WidgetState.selected) ? DZ.white : DZ.grey2,
+      ),
       trackColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey4),
+        (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey4,
+      ),
       trackOutlineColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey3),
+        (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey3,
+      ),
       trackOutlineWidth: const WidgetStatePropertyAll(DZ.hairline),
     ),
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? DZ.cyan : Colors.transparent),
+        (s) => s.contains(WidgetState.selected) ? DZ.cyan : Colors.transparent,
+      ),
       checkColor: const WidgetStatePropertyAll(DZ.white),
       side: const BorderSide(color: DZ.grey2, width: DZ.hairline),
       shape: const RoundedRectangleBorder(borderRadius: DZ.radius),
     ),
     radioTheme: RadioThemeData(
       fillColor: WidgetStateProperty.resolveWith(
-          (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey2),
+        (s) => s.contains(WidgetState.selected) ? DZ.cyan : DZ.grey2,
+      ),
     ),
     dialogTheme: const DialogThemeData(
       backgroundColor: DZ.black,
@@ -138,8 +143,12 @@ ThemeData buildTheme() {
       textStyle: TextStyle(
         fontFamily: DZ.family,
         fontSize: 12,
+        height: 20 / 12,
         color: DZ.black,
         fontWeight: FontWeight.w600,
+        // Mulish is a variable font: fontWeight alone does not move it, so
+        // without this the label rendered at 400 instead of 600.
+        fontVariations: DZ.semiboldWeight,
       ),
       waitDuration: Duration(milliseconds: 600),
     ),
@@ -147,9 +156,12 @@ ThemeData buildTheme() {
       backgroundColor: DZ.white,
       contentTextStyle: TextStyle(
         fontFamily: DZ.family,
-        fontSize: 14,
+        // 16/24 — body. 14 is not a step on the ramp.
+        fontSize: 16,
+        height: 24 / 16,
         color: DZ.black,
         fontWeight: FontWeight.w600,
+        fontVariations: DZ.semiboldWeight,
       ),
       actionTextColor: DZ.cyan,
       behavior: SnackBarBehavior.floating,
@@ -176,7 +188,11 @@ ThemeData buildTheme() {
     inputDecorationTheme: const InputDecorationTheme(
       filled: false,
       contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      hintStyle: TextStyle(fontFamily: DZ.family, fontSize: 16, color: DZ.grey2),
+      hintStyle: TextStyle(
+        fontFamily: DZ.family,
+        fontSize: 16,
+        color: DZ.grey2,
+      ),
       border: OutlineInputBorder(
         borderRadius: DZ.radius,
         borderSide: BorderSide(color: DZ.white, width: DZ.hairline),
@@ -194,13 +210,15 @@ ThemeData buildTheme() {
         borderSide: BorderSide(color: DZ.red, width: DZ.hairline),
       ),
     ),
-    pageTransitionsTheme: const PageTransitionsTheme(builders: {
-      TargetPlatform.android: _MetroTransition(),
-      TargetPlatform.iOS: _MetroTransition(),
-      TargetPlatform.windows: _MetroTransition(),
-      TargetPlatform.macOS: _MetroTransition(),
-      TargetPlatform.linux: _MetroTransition(),
-    }),
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: _MetroTransition(),
+        TargetPlatform.iOS: _MetroTransition(),
+        TargetPlatform.windows: _MetroTransition(),
+        TargetPlatform.macOS: _MetroTransition(),
+        TargetPlatform.linux: _MetroTransition(),
+      },
+    ),
   );
 }
 
@@ -222,8 +240,10 @@ class _MetroTransition extends PageTransitionsBuilder {
     final curved = CurvedAnimation(parent: animation, curve: DZ.ease);
     if (reduced) return FadeTransition(opacity: curved, child: child);
     return SlideTransition(
-      position: Tween(begin: const Offset(0.12, 0), end: Offset.zero)
-          .animate(curved),
+      position: Tween(
+        begin: const Offset(0.12, 0),
+        end: Offset.zero,
+      ).animate(curved),
       child: FadeTransition(opacity: curved, child: child),
     );
   }
@@ -235,12 +255,17 @@ class NoGlow extends ScrollBehavior {
 
   @override
   Widget buildOverscrollIndicator(
-          BuildContext context, Widget child, ScrollableDetails details) =>
-      child;
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => child;
 
   @override
   Widget buildScrollbar(
-      BuildContext context, Widget child, ScrollableDetails details) {
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
     // A pointer gets a scrollbar; a finger and a remote do not.
     final platform = getPlatform(context);
     if (platform == TargetPlatform.windows ||

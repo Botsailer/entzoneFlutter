@@ -30,38 +30,85 @@ class CategorySpec {
 const _categories = <CategorySpec>[
   CategorySpec(label: 'for you', rows: []),
   CategorySpec(label: 'movies', rows: [], feedTab: 2),
-  CategorySpec(label: 'series', rows: [
-    (title: 'popular series', query: FilterQuery(channelId: Channel.tv)),
-    (title: 'k-drama', query: FilterQuery(channelId: Channel.tv, country: 'Korea')),
-    (title: 'indian drama', query: FilterQuery(channelId: Channel.tv, country: 'India')),
-    (title: 'from the us', query: FilterQuery(channelId: Channel.tv, country: 'United States')),
-    (title: 'hindi dubbed', query: FilterQuery(channelId: Channel.tv, classify: 'Hindi dub')),
-    (title: 'new episodes', query: FilterQuery(channelId: Channel.tv, sort: 'Latest')),
-  ]),
-  CategorySpec(label: 'anime', rows: [
-    (title: 'top anime', query: FilterQuery(channelId: Channel.anime)),
-    (title: 'hindi dubbed anime', query: FilterQuery(channelId: Channel.anime, classify: 'Hindi dub')),
-    (title: 'latest anime', query: FilterQuery(channelId: Channel.anime, sort: 'Latest')),
-  ]),
-  CategorySpec(label: 'k-drama', rows: [
-    (title: 'trending k-drama', query: FilterQuery(channelId: Channel.tv, country: 'Korea')),
-    (title: 'korean films', query: FilterQuery(channelId: Channel.movie, country: 'Korea')),
-    (title: 'newest first', query: FilterQuery(channelId: Channel.tv, country: 'Korea', sort: 'Latest')),
-  ]),
+  CategorySpec(
+    label: 'series',
+    rows: [
+      (title: 'popular series', query: FilterQuery(channelId: Channel.tv)),
+      (
+        title: 'k-drama',
+        query: FilterQuery(channelId: Channel.tv, country: 'Korea'),
+      ),
+      (
+        title: 'indian drama',
+        query: FilterQuery(channelId: Channel.tv, country: 'India'),
+      ),
+      (
+        title: 'from the us',
+        query: FilterQuery(channelId: Channel.tv, country: 'United States'),
+      ),
+      (
+        title: 'hindi dubbed',
+        query: FilterQuery(channelId: Channel.tv, classify: 'Hindi dub'),
+      ),
+      (
+        title: 'new episodes',
+        query: FilterQuery(channelId: Channel.tv, sort: 'Latest'),
+      ),
+    ],
+  ),
+  CategorySpec(
+    label: 'anime',
+    rows: [
+      (title: 'top anime', query: FilterQuery(channelId: Channel.anime)),
+      (
+        title: 'hindi dubbed anime',
+        query: FilterQuery(channelId: Channel.anime, classify: 'Hindi dub'),
+      ),
+      (
+        title: 'latest anime',
+        query: FilterQuery(channelId: Channel.anime, sort: 'Latest'),
+      ),
+    ],
+  ),
+  CategorySpec(
+    label: 'k-drama',
+    rows: [
+      (
+        title: 'trending k-drama',
+        query: FilterQuery(channelId: Channel.tv, country: 'Korea'),
+      ),
+      (
+        title: 'korean films',
+        query: FilterQuery(channelId: Channel.movie, country: 'Korea'),
+      ),
+      (
+        title: 'newest first',
+        query: FilterQuery(
+          channelId: Channel.tv,
+          country: 'Korea',
+          sort: 'Latest',
+        ),
+      ),
+    ],
+  ),
 ];
 
-final _homeFeedProvider = FutureProvider.autoDispose<Feed>((ref) => Api.i.home());
-final _trendingProvider =
-    FutureProvider.autoDispose<List<Subject>>((ref) => Api.i.trending(perPage: 24));
-final _tabFeedProvider =
-    FutureProvider.autoDispose.family<Feed, int>((ref, tab) => Api.i.tab(tab));
+final _homeFeedProvider = FutureProvider.autoDispose<Feed>(
+  (ref) => Api.i.home(),
+);
+final _trendingProvider = FutureProvider.autoDispose<List<Subject>>(
+  (ref) => Api.i.trending(perPage: 24),
+);
+final _tabFeedProvider = FutureProvider.autoDispose.family<Feed, int>(
+  (ref, tab) => Api.i.tab(tab),
+);
 final _filterProvider = FutureProvider.autoDispose
     .family<List<Subject>, String>((ref, key) async {
-  final q = _filterRegistry[key];
-  if (q == null) return const [];
-  final page = await Api.i.filter(q);
-  return page.items;
-});
+      final q = _filterRegistry[key];
+      if (q == null) return const [];
+      final page = await Api.i.filter(q);
+      return page.items;
+    });
 
 /// Filter queries are looked up by a stable string so the family key stays
 /// comparable — a FilterQuery is not a value type.
@@ -121,13 +168,16 @@ class _ForYouPane extends ConsumerWidget {
     final history = ref.watch(historyProvider);
     final watchlist = ref.watch(watchlistProvider);
     final progress = ref.watch(progressProvider);
-    final downloads = ref.watch(downloadsProvider).asData?.value ?? const <DownloadItem>[];
+    final downloads =
+        ref.watch(downloadsProvider).asData?.value ?? const <DownloadItem>[];
 
-    final resumable = history.where((e) => !e.finished && e.position > 10).toList();
+    final resumable = history
+        .where((e) => !e.finished && e.position > 10)
+        .toList();
     final lead = resumable.isNotEmpty
         ? resumable.first.subject
         : feed.asData?.value.bannerItems.firstOrNull?.subject ??
-            trending.asData?.value.firstOrNull;
+              trending.asData?.value.firstOrNull;
     final leadEntry = resumable.isNotEmpty ? resumable.first : null;
     final leadImage = feed.asData?.value.bannerItems
         .where((b) => b.subject.subjectId == lead?.subjectId)
@@ -137,8 +187,18 @@ class _ForYouPane extends ConsumerWidget {
 
     final offlineIds = {
       for (final d in downloads.where((d) => d.status == DownloadStatus.done))
-        d.subject.subjectId
+        d.subject.subjectId,
     };
+
+    // The hero block is one composition, not four tiles that happen to sit in
+    // a row: the lead holds the left of a two-row band and the four count
+    // tiles fill the rest of it, two to a row. Sized from the live column
+    // count so the band closes exactly — at four columns on a phone that is
+    // the contract's own 2×2 lead with 1×1 tiles, and at ten on a desktop the
+    // same picture drawn wider, instead of four small tiles stranded beside a
+    // field of black.
+    final countCols = (l.columns / 4).round().clamp(1, l.columns);
+    final leadCols = (l.columns - countCols * 2).clamp(2, l.columns);
 
     return RefreshIndicator(
       color: DZ.cyan,
@@ -166,7 +226,8 @@ class _ForYouPane extends ConsumerWidget {
           else if (feed.hasError && lead == null)
             StateBlock(
               headline: 'the catalog is not answering',
-              detail: feed.error?.toString() ??
+              detail:
+                  feed.error?.toString() ??
                   'Check your connection and try again.',
               actionLabel: 'try again',
               onAction: () {
@@ -179,13 +240,17 @@ class _ForYouPane extends ConsumerWidget {
               children: [
                 if (lead != null)
                   TileSpan(
-                    cols: 2,
+                    cols: leadCols,
                     rows: 2,
                     child: LeadTile(
                       subject: lead,
                       imageUrl: leadImage,
                       autofocus: l.isTV,
-                      progress: progress[progressKey(lead.subjectId, leadEntry?.episode)],
+                      progress:
+                          progress[progressKey(
+                            lead.subjectId,
+                            leadEntry?.episode,
+                          )],
                       caption: leadEntry == null
                           ? null
                           : meta([
@@ -199,24 +264,32 @@ class _ForYouPane extends ConsumerWidget {
                     ),
                   ),
                 TileSpan(
+                  cols: countCols,
                   child: CountTile(
                     label: 'continue',
                     count: resumable.length,
                     fill: DZ.cyan,
                     caption: resumable.isEmpty ? 'nothing started' : null,
-                    onTap: () => Nav.openLibrary(context, LibraryTab.continueWatching),
+                    onTap: () =>
+                        Nav.openLibrary(context, LibraryTab.continueWatching),
                   ),
                 ),
                 TileSpan(
+                  cols: countCols,
                   child: CountTile(
                     label: 'downloads',
-                    count: downloads.where((d) => d.status == DownloadStatus.done).length,
+                    count: downloads
+                        .where((d) => d.status == DownloadStatus.done)
+                        .length,
                     fill: DZ.magenta,
-                    caption: downloads.any((d) => d.active) ? 'in progress' : null,
+                    caption: downloads.any((d) => d.active)
+                        ? 'in progress'
+                        : null,
                     onTap: () => Nav.openLibrary(context, LibraryTab.downloads),
                   ),
                 ),
                 TileSpan(
+                  cols: countCols,
                   child: CountTile(
                     label: 'my list',
                     count: watchlist.length,
@@ -225,6 +298,7 @@ class _ForYouPane extends ConsumerWidget {
                   ),
                 ),
                 TileSpan(
+                  cols: countCols,
                   child: CountTile(
                     label: 'search',
                     count: 0,
@@ -242,11 +316,14 @@ class _ForYouPane extends ConsumerWidget {
               title: 'continue watching',
               subjects: resumable.skip(1).map((e) => e.subject).toList(),
               progressOf: (s) {
-                final e = resumable.firstWhere((x) => x.subject.subjectId == s.subjectId);
+                final e = resumable.firstWhere(
+                  (x) => x.subject.subjectId == s.subjectId,
+                );
                 return progress[progressKey(s.subjectId, e.episode)];
               },
               offlineIds: offlineIds,
-              onSeeAll: () => Nav.openLibrary(context, LibraryTab.continueWatching),
+              onSeeAll: () =>
+                  Nav.openLibrary(context, LibraryTab.continueWatching),
             ),
 
           if (trending.asData?.value.isNotEmpty ?? false)
@@ -261,7 +338,8 @@ class _ForYouPane extends ConsumerWidget {
               ),
             ),
 
-          for (final section in feed.asData?.value.subjectSections ?? const <Section>[])
+          for (final section
+              in feed.asData?.value.subjectSections ?? const <Section>[])
             _Row(
               title: section.cleanTitle,
               subjects: section.subjects,
@@ -323,25 +401,28 @@ class _FeedPane extends ConsumerWidget {
               child: GiantWord('films'),
             ),
             if (banner.isNotEmpty)
-              TileField(children: [
-                TileSpan(
-                  cols: 2,
-                  rows: 2,
-                  child: LeadTile(
-                    subject: banner.first.subject,
-                    imageUrl: banner.first.image.url,
-                    onTap: () => Nav.openTitle(context, banner.first.subject),
-                  ),
-                ),
-                for (final b in banner.skip(1).take(4))
+              TileField(
+                children: [
                   TileSpan(
-                    child: PosterTile(
-                      subject: b.subject,
-                      onTap: () => Nav.openTitle(context, b.subject),
+                    cols: 2,
+                    rows: 2,
+                    child: LeadTile(
+                      subject: banner.first.subject,
+                      imageUrl: banner.first.image.url,
+                      onTap: () => Nav.openTitle(context, banner.first.subject),
                     ),
                   ),
-              ]),
-            for (final s in sections) _Row(title: s.cleanTitle, subjects: s.subjects),
+                  for (final b in banner.skip(1).take(4))
+                    TileSpan(
+                      child: PosterTile(
+                        subject: b.subject,
+                        onTap: () => Nav.openTitle(context, b.subject),
+                      ),
+                    ),
+                ],
+              ),
+            for (final s in sections)
+              _Row(title: s.cleanTitle, subjects: s.subjects),
           ],
         );
       },
@@ -368,7 +449,8 @@ class _FilterPane extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 16),
           child: GiantWord(spec.label),
         ),
-        for (final row in spec.rows) _FilterRow(title: row.title, query: row.query),
+        for (final row in spec.rows)
+          _FilterRow(title: row.title, query: row.query),
       ],
     );
   }
@@ -386,7 +468,8 @@ class _FilterRow extends ConsumerWidget {
 
     return items.when(
       loading: () => _RowSkeleton(title: title),
-      error: (_, _) => const SizedBox.shrink(), // a dead row is removed, not shouted about
+      error: (_, _) =>
+          const SizedBox.shrink(), // a dead row is removed, not shouted about
       data: (list) => list.isEmpty
           ? const SizedBox.shrink()
           : _Row(
@@ -479,7 +562,10 @@ class _RowSkeleton extends StatelessWidget {
           child: Row(
             children: [
               for (var i = 0; i < l.columns + 1; i++) ...[
-                SizedBox(width: cell, child: TileSkeleton(delayIndex: i)),
+                SizedBox(
+                  width: cell,
+                  child: TileSkeleton(delayIndex: i),
+                ),
                 const SizedBox(width: DZ.gap),
               ],
             ],

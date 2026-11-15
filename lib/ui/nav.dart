@@ -27,7 +27,9 @@ class Nav {
 
   static void openSearch(BuildContext context, {String? query}) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => SearchScreen(initialQuery: query)),
+      MaterialPageRoute(
+        builder: (_) => SearchScreen(initialQuery: query, takeFocus: true),
+      ),
     );
   }
 
@@ -46,7 +48,15 @@ class Nav {
   /// The library is a shell destination, not a pushed route — so this asks the
   /// shell to switch rather than stacking another copy on top.
   static void openLibrary(BuildContext context, LibraryTab tab) {
-    LibraryRequest.of(context)?.call(tab);
+    ShellRequest.of(context)?.showLibrary(tab);
+  }
+
+  /// Back to the catalog, from anywhere inside the shell. Pops any pushed
+  /// routes first, so "browse the catalog" lands on the catalog rather than
+  /// switching a tab underneath whatever is on top.
+  static void goHome(BuildContext context) {
+    Navigator.of(context).popUntil((r) => r.isFirst);
+    ShellRequest.of(context)?.showHome();
   }
 
   /// Start the player. Returns when it closes.
@@ -134,18 +144,24 @@ class Nav {
   }
 }
 
-/// Lets any screen ask the shell to show a library tab, without a global key
+/// Lets any screen ask the shell to change destination, without a global key
 /// or a navigator hack.
-class LibraryRequest extends InheritedWidget {
-  const LibraryRequest({super.key, required this.show, required super.child});
+class ShellRequest extends InheritedWidget {
+  const ShellRequest({
+    super.key,
+    required this.showLibrary,
+    required this.showHome,
+    required super.child,
+  });
 
-  final void Function(LibraryTab tab) show;
+  final void Function(LibraryTab tab) showLibrary;
+  final VoidCallback showHome;
 
-  static void Function(LibraryTab)? of(BuildContext context) =>
-      context.dependOnInheritedWidgetOfExactType<LibraryRequest>()?.show;
+  static ShellRequest? of(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<ShellRequest>();
 
   @override
-  bool updateShouldNotify(LibraryRequest old) => false;
+  bool updateShouldNotify(ShellRequest old) => false;
 }
 
 /// A flat, lowercase message. Replaces every system alert in the app.

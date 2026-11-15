@@ -32,6 +32,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   final _searchController = TextEditingController();
   final _libraryKey = GlobalKey<LibraryScreenState>();
+  final _searchKey = GlobalKey<SearchScreenState>();
 
   @override
   void dispose() {
@@ -50,12 +51,16 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _go(Dest d) {
     if (d == _dest) return;
     setState(() => _dest = d);
+    // The field does not autofocus on its own — every destination is alive in
+    // the stack — so arriving here is what hands it the caret.
+    if (d == Dest.search) _searchKey.currentState?.focusField();
   }
 
   @override
   Widget build(BuildContext context) {
     final l = Layout.of(context);
-    final downloads = ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
+    final downloads =
+        ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
     final activeDownloads = downloads.where((d) => d.active).length;
 
     // The source switch swaps what "home" means: the live catalog, or only
@@ -64,62 +69,85 @@ class _AppShellState extends ConsumerState<AppShell> {
         ? const LibraryScreen(initialTab: LibraryTab.downloads)
         : const HomeScreen();
 
-    return LibraryRequest(
-      show: _showLibrary,
-      child: CallbackShortcuts(
-        bindings: {
-          const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
-              _go(Dest.search),
-          const SingleActivator(LogicalKeyboardKey.slash): () => _go(Dest.search),
-          const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () =>
-              _go(Dest.home),
-          const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () =>
-              _go(Dest.search),
-          const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
-              _go(Dest.library),
-          const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () =>
-              _go(Dest.settings),
+    // System back walks the shell back to the catalog home before it leaves
+    // the app, which is what every Android viewer expects; only home itself
+    // hands the gesture to the OS.
+    final atRoot = _dest == Dest.home && _source == Source.catalog;
+
+    return ShellRequest(
+      showLibrary: _showLibrary,
+      showHome: () => setState(() {
+        _source = Source.catalog;
+        _dest = Dest.home;
+      }),
+      child: PopScope(
+        canPop: atRoot,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop) return;
+          setState(() {
+            if (_source != Source.catalog) {
+              _source = Source.catalog;
+            } else {
+              _dest = Dest.home;
+            }
+          });
         },
-        child: Scaffold(
-          backgroundColor: DZ.black,
-          body: Column(
-            children: [
-              if (l.railNav)
-                HeaderBand(
-                  dest: _dest,
-                  onDest: _go,
-                  source: _source,
-                  onSource: (s) => setState(() => _source = s),
-                  searchController: _searchController,
-                  downloadCount: activeDownloads,
-                  onSearch: (q) {
-                    if (q.trim().isEmpty) return;
-                    Nav.openSearch(context, query: q.trim());
-                    _searchController.clear();
-                  },
-                )
-              else
-                SizedBox(height: l.safe.top),
-              Expanded(
-                // IndexedStack keeps every destination alive, so moving between
-                // them never costs a reload or a lost scroll position.
-                child: IndexedStack(
-                  index: Dest.values.indexOf(_dest),
-                  children: [
-                    homePane,
-                    const SearchScreen(),
-                    LibraryScreen(key: _libraryKey, initialTab: _libraryTab),
-                    const SettingsScreen(),
-                  ],
+        child: CallbackShortcuts(
+          bindings: {
+            const SingleActivator(LogicalKeyboardKey.keyF, control: true): () =>
+                _go(Dest.search),
+            const SingleActivator(LogicalKeyboardKey.slash): () =>
+                _go(Dest.search),
+            const SingleActivator(LogicalKeyboardKey.digit1, alt: true): () =>
+                _go(Dest.home),
+            const SingleActivator(LogicalKeyboardKey.digit2, alt: true): () =>
+                _go(Dest.search),
+            const SingleActivator(LogicalKeyboardKey.digit3, alt: true): () =>
+                _go(Dest.library),
+            const SingleActivator(LogicalKeyboardKey.digit4, alt: true): () =>
+                _go(Dest.settings),
+          },
+          child: Scaffold(
+            backgroundColor: DZ.black,
+            body: Column(
+              children: [
+                if (l.railNav)
+                  HeaderBand(
+                    dest: _dest,
+                    onDest: _go,
+                    source: _source,
+                    onSource: (s) => setState(() => _source = s),
+                    searchController: _searchController,
+                    downloadCount: activeDownloads,
+                    onSearch: (q) {
+                      if (q.trim().isEmpty) return;
+                      Nav.openSearch(context, query: q.trim());
+                      _searchController.clear();
+                    },
+                  )
+                else
+                  SizedBox(height: l.safe.top),
+                Expanded(
+                  // IndexedStack keeps every destination alive, so moving between
+                  // them never costs a reload or a lost scroll position.
+                  child: IndexedStack(
+                    index: Dest.values.indexOf(_dest),
+                    children: [
+                      homePane,
+                      SearchScreen(key: _searchKey),
+                      LibraryScreen(key: _libraryKey, initialTab: _libraryTab),
+                      const SettingsScreen(),
+                    ],
+                  ),
                 ),
-              ),
-              if (!l.railNav)
-                BottomBar(
-                  dest: _dest,
-                  onDest: _go,
-                  downloadCount: activeDownloads,
-                ),
-            ],
+                if (!l.railNav)
+                  BottomBar(
+                    dest: _dest,
+                    onDest: _go,
+                    downloadCount: activeDownloads,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

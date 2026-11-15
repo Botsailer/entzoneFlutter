@@ -105,8 +105,8 @@ class Store {
   /// Read many keys at once — used to load a whole season's watch progress in
   /// one pass instead of one await per episode.
   Map<String, String?> getMany(Iterable<String> ks) => {
-        for (final k in ks) k: getStringSync(k),
-      };
+    for (final k in ks) k: getStringSync(k),
+  };
 
   // ───────────────────────── flushing ─────────────────────────
 

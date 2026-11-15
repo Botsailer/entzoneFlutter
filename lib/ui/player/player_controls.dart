@@ -9,8 +9,9 @@ import 'player_screen.dart' show PlayerSheet;
 
 /// The gesture layer over the picture.
 ///
-/// Tap toggles the chrome. A double tap on the left or right third skips by the
-/// user's own interval. Holding runs at the user's chosen speed and releases.
+/// Tap toggles the chrome. On desktop, a double click toggles fullscreen. On
+/// touch devices, a double tap on the left or right third skips by the user's
+/// own interval. Holding runs at the user's chosen speed and releases.
 /// A vertical drag on the right half moves the volume.
 class PlayerGestures extends StatefulWidget {
   const PlayerGestures({
@@ -20,6 +21,7 @@ class PlayerGestures extends StatefulWidget {
     required this.onTap,
     required this.onDoubleTapLeft,
     required this.onDoubleTapRight,
+    this.onDoubleTapFullscreen,
     required this.onHoldStart,
     required this.onHoldEnd,
     required this.onVolumeDelta,
@@ -30,6 +32,7 @@ class PlayerGestures extends StatefulWidget {
   final VoidCallback onTap;
   final VoidCallback onDoubleTapLeft;
   final VoidCallback onDoubleTapRight;
+  final VoidCallback? onDoubleTapFullscreen;
   final VoidCallback onHoldStart;
   final VoidCallback onHoldEnd;
   final ValueChanged<double> onVolumeDelta;
@@ -59,7 +62,9 @@ class _PlayerGesturesState extends State<PlayerGestures> {
           onTapDown: (d) => _last = d.localPosition,
           onDoubleTapDown: (d) => _last = d.localPosition,
           onDoubleTap: () {
-            if (_last.dx < w * 0.38) {
+            if (widget.onDoubleTapFullscreen != null) {
+              widget.onDoubleTapFullscreen!();
+            } else if (_last.dx < w * 0.38) {
               widget.onDoubleTapLeft();
             } else if (_last.dx > w * 0.62) {
               widget.onDoubleTapRight();
@@ -103,6 +108,11 @@ class PlayerChrome extends StatelessWidget {
     required this.autoNext,
     required this.skipSeconds,
     required this.canPip,
+    this.onMinimize,
+    this.onToggleMaximize,
+    this.onToggleFullscreen,
+    this.isMaximized = false,
+    this.isFullscreen = false,
     required this.onClose,
     required this.onPlayPause,
     required this.onSkip,
@@ -134,6 +144,11 @@ class PlayerChrome extends StatelessWidget {
   final bool autoNext;
   final int skipSeconds;
   final bool canPip;
+  final VoidCallback? onMinimize;
+  final VoidCallback? onToggleMaximize;
+  final VoidCallback? onToggleFullscreen;
+  final bool isMaximized;
+  final bool isFullscreen;
 
   final VoidCallback onClose;
   final VoidCallback onPlayPause;
@@ -221,6 +236,38 @@ class PlayerChrome extends StatelessWidget {
                         onPressed: onPip,
                       ),
                     ],
+                    if (onMinimize != null) ...[
+                      const SizedBox(width: 8),
+                      MetroIconButton(
+                        icon: Icons.minimize,
+                        tooltip: 'minimize window',
+                        outlined: false,
+                        size: 42,
+                        onPressed: onMinimize,
+                      ),
+                      MetroIconButton(
+                        icon: isMaximized
+                            ? Icons.filter_none
+                            : Icons.crop_square,
+                        tooltip: isMaximized
+                            ? 'restore window'
+                            : 'maximize window',
+                        outlined: false,
+                        size: 42,
+                        onPressed: onToggleMaximize,
+                      ),
+                      MetroIconButton(
+                        icon: isFullscreen
+                            ? Icons.fullscreen_exit
+                            : Icons.fullscreen,
+                        tooltip: isFullscreen
+                            ? 'exit fullscreen'
+                            : 'fullscreen',
+                        outlined: false,
+                        size: 42,
+                        onPressed: onToggleFullscreen,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -294,65 +341,68 @@ class PlayerChrome extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          if (!l.isTV)
-                            _BarAction(
-                              icon: Icons.lock_outline,
-                              label: 'lock',
-                              onPressed: onLock,
-                            ),
-                          if (onNext != null)
-                            _BarAction(
-                              icon: Icons.skip_next,
-                              label: 'next',
-                              onPressed: onNext,
-                            ),
+                    // Wraps rather than scrolls. A horizontal scroll view
+                    // advertises nothing on a pointer, and the control it
+                    // pushed out of reach first was quality — the one the bar
+                    // exists for. A second line of chips costs 44px and keeps
+                    // every action on screen.
+                    Wrap(
+                      runSpacing: DZ.gap,
+                      children: [
+                        if (!l.isTV)
                           _BarAction(
-                            icon: autoNext
-                                ? Icons.repeat_on_outlined
-                                : Icons.repeat,
-                            label: 'auto-next ${autoNext ? 'on' : 'off'}',
-                            active: autoNext,
-                            onPressed: onToggleAutoNext,
+                            icon: Icons.lock_outline,
+                            label: 'lock',
+                            onPressed: onLock,
                           ),
+                        if (onNext != null)
                           _BarAction(
-                            icon: Icons.closed_caption_outlined,
-                            label: 'subtitles',
-                            active: captionsOn,
-                            onPressed: () => onSheet(PlayerSheet.captions),
+                            icon: Icons.skip_next,
+                            label: 'next',
+                            onPressed: onNext,
                           ),
-                          _BarAction(
-                            icon: Icons.graphic_eq,
-                            label: 'audio',
-                            onPressed: () => onSheet(PlayerSheet.audio),
-                          ),
-                          _BarAction(
-                            icon: Icons.speed,
-                            label: speed == 1 ? 'speed' : '${speed}x',
-                            active: speed != 1,
-                            onPressed: () => onSheet(PlayerSheet.speed),
-                          ),
-                          _BarAction(
-                            icon: Icons.aspect_ratio,
-                            label: fitLabel,
-                            onPressed: onFit,
-                          ),
-                          _BarAction(
-                            icon: Icons.forward_10,
-                            label: 'skip ${skipSeconds}s',
-                            onPressed: () => onSheet(PlayerSheet.settings),
-                          ),
-                          _BarAction(
-                            icon: Icons.high_quality_outlined,
-                            label: qualityLabel,
-                            strong: true,
-                            onPressed: () => onSheet(PlayerSheet.quality),
-                          ),
-                        ],
-                      ),
+                        _BarAction(
+                          icon: autoNext
+                              ? Icons.repeat_on_outlined
+                              : Icons.repeat,
+                          label: 'auto-next ${autoNext ? 'on' : 'off'}',
+                          active: autoNext,
+                          onPressed: onToggleAutoNext,
+                        ),
+                        _BarAction(
+                          icon: Icons.closed_caption_outlined,
+                          label: 'subtitles',
+                          active: captionsOn,
+                          onPressed: () => onSheet(PlayerSheet.captions),
+                        ),
+                        _BarAction(
+                          icon: Icons.graphic_eq,
+                          label: 'audio',
+                          onPressed: () => onSheet(PlayerSheet.audio),
+                        ),
+                        _BarAction(
+                          icon: Icons.speed,
+                          label: speed == 1 ? 'speed' : '${speed}x',
+                          active: speed != 1,
+                          onPressed: () => onSheet(PlayerSheet.speed),
+                        ),
+                        _BarAction(
+                          icon: Icons.aspect_ratio,
+                          label: fitLabel,
+                          onPressed: onFit,
+                        ),
+                        _BarAction(
+                          icon: Icons.forward_10,
+                          label: 'skip ${skipSeconds}s',
+                          onPressed: () => onSheet(PlayerSheet.settings),
+                        ),
+                        _BarAction(
+                          icon: Icons.high_quality_outlined,
+                          label: qualityLabel,
+                          strong: true,
+                          onPressed: () => onSheet(PlayerSheet.quality),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -518,7 +568,7 @@ class _PlayButton extends StatelessWidget {
         child: Icon(
           playing ? Icons.pause : Icons.play_arrow,
           size: side * 0.5,
-          color: DZ.white,
+          color: inkOn(DZ.cyan),
         ),
       ),
     );

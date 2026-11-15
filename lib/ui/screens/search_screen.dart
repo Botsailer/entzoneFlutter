@@ -14,18 +14,28 @@ import '../widgets/pivot.dart';
 import '../widgets/poster_tile.dart';
 import '../widgets/tile.dart';
 
-final _searchHomeProvider =
-    FutureProvider.autoDispose<SearchHome>((ref) => Api.i.searchHome());
+final _searchHomeProvider = FutureProvider.autoDispose<SearchHome>(
+  (ref) => Api.i.searchHome(),
+);
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key, this.initialQuery});
+  const SearchScreen({super.key, this.initialQuery, this.takeFocus = false});
   final String? initialQuery;
 
+  /// Whether the field claims focus as soon as this screen is built.
+  ///
+  /// False inside the shell: its destinations live in an IndexedStack, so
+  /// every one of them is built and alive at launch. A field that autofocused
+  /// there took the caret the moment the app opened, while the home tiles
+  /// were the thing on screen. The shell asks for focus with [focusField]
+  /// when search actually becomes the destination.
+  final bool takeFocus;
+
   @override
-  ConsumerState<SearchScreen> createState() => _SearchScreenState();
+  ConsumerState<SearchScreen> createState() => SearchScreenState();
 }
 
-class _SearchScreenState extends ConsumerState<SearchScreen> {
+class SearchScreenState extends ConsumerState<SearchScreen> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   final _scroll = ScrollController();
@@ -53,6 +63,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  /// Put the caret in the field. Called by the shell when the viewer moves to
+  /// the search destination.
+  void focusField() {
+    if (!mounted) return;
+    _focus.requestFocus();
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -64,7 +81,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   void _onScroll() {
     if (!_hasMore || _loadingMore || _loading) return;
-    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 900) _more();
+    if (_scroll.position.pixels > _scroll.position.maxScrollExtent - 900) {
+      _more();
+    }
   }
 
   void _onChanged(String value) {
@@ -121,7 +140,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Future<void> _more() async {
     setState(() => _loadingMore = true);
     try {
-      final r = await Api.i.search(_query, page: _page + 1, subjectType: _typeFilter);
+      final r = await Api.i.search(
+        _query,
+        page: _page + 1,
+        subjectType: _typeFilter,
+      );
       if (!mounted) return;
       setState(() {
         _page += 1;
@@ -167,7 +190,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       controller: _controller,
                       focusNode: _focus,
                       hint: 'search films and series',
-                      autofocus: true,
+                      autofocus: widget.takeFocus,
                       onChanged: _onChanged,
                       onSubmitted: _run,
                       onClear: () => setState(() {
@@ -219,23 +242,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       },
                     )
                   : _query.isEmpty
-                      ? _StartPage(
-                          padding: pad,
-                          onPick: (s) {
-                            _controller.text = s;
-                            _run(s);
-                          },
-                        )
-                      : _Results(
-                          padding: pad,
-                          query: _query,
-                          results: _results,
-                          loading: _loading,
-                          loadingMore: _loadingMore,
-                          error: _error,
-                          scroll: _scroll,
-                          onRetry: () => _run(_query),
-                        ),
+                  ? _StartPage(
+                      padding: pad,
+                      onPick: (s) {
+                        _controller.text = s;
+                        _run(s);
+                      },
+                    )
+                  : _Results(
+                      padding: pad,
+                      query: _query,
+                      results: _results,
+                      loading: _loading,
+                      loadingMore: _loadingMore,
+                      error: _error,
+                      scroll: _scroll,
+                      onRetry: () => _run(_query),
+                    ),
             ),
           ],
         ),
@@ -257,20 +280,22 @@ class _Suggestions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView.builder(
-        padding: padding.copyWith(top: 8),
-        itemCount: items.length,
-        itemBuilder: (context, i) => InkWell(
-          onTap: () => onPick(items[i]),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            child: Row(children: [
-              const Icon(Icons.north_west, size: 16, color: DZ.grey2),
-              const SizedBox(width: 12),
-              Expanded(child: Text(items[i].toLowerCase(), style: DZ.body)),
-            ]),
-          ),
+    padding: padding.copyWith(top: 8),
+    itemCount: items.length,
+    itemBuilder: (context, i) => InkWell(
+      onTap: () => onPick(items[i]),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        child: Row(
+          children: [
+            const Icon(Icons.north_west, size: 16, color: DZ.grey2),
+            const SizedBox(width: 12),
+            Expanded(child: Text(items[i].toLowerCase(), style: DZ.body)),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// The start page: what everyone is searching for, what the viewer searched
@@ -300,7 +325,10 @@ class _StartPage extends ConsumerWidget {
             topGap: 16,
             trailing: GestureDetector(
               onTap: () => ref.read(recentSearchProvider.notifier).clear(),
-              child: Text('clear', style: l.t(DZ.caption).copyWith(color: DZ.grey2)),
+              child: Text(
+                'clear',
+                style: l.t(DZ.caption).copyWith(color: DZ.grey2),
+              ),
             ),
           ),
           Wrap(
@@ -308,7 +336,12 @@ class _StartPage extends ConsumerWidget {
             runSpacing: DZ.gap,
             children: [
               for (final r in recent)
-                MetroButton(label: r, dense: true, chevron: false, onPressed: () => onPick(r)),
+                MetroButton(
+                  label: r,
+                  dense: true,
+                  chevron: false,
+                  onPressed: () => onPick(r),
+                ),
             ],
           ),
         ],
@@ -341,13 +374,16 @@ class _StartPage extends ConsumerWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SectionHead(label: group.name.isEmpty ? group.category : group.name),
+                    SectionHead(
+                      label: group.name.isEmpty ? group.category : group.name,
+                    ),
                     SizedBox(
                       height: l.columnWidth * 1.5,
                       child: ListView.separated(
                         scrollDirection: Axis.horizontal,
                         itemCount: group.items.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: DZ.gap),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(width: DZ.gap),
                         itemBuilder: (context, i) => SizedBox(
                           width: l.columnWidth,
                           child: PosterTile(
@@ -393,7 +429,10 @@ class _Results extends StatelessWidget {
     final l = Layout.of(context);
 
     if (loading) {
-      return Padding(padding: padding, child: const LoadingBlock(label: 'searching'));
+      return Padding(
+        padding: padding,
+        child: const LoadingBlock(label: 'searching'),
+      );
     }
     if (error != null) {
       return Padding(
@@ -411,7 +450,8 @@ class _Results extends StatelessWidget {
         padding: padding,
         child: StateBlock(
           headline: 'nothing matched "$query"',
-          detail: 'Try a shorter phrase, the original-language title, or check '
+          detail:
+              'Try a shorter phrase, the original-language title, or check '
               'the spelling. This catalog indexes titles, not actors.',
         ),
       );

@@ -27,15 +27,9 @@ class SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 32),
               if (error == null)
-                const Text(
-                  'loading',
-                  style: TextStyle(color: DZ.grey1, fontSize: 12),
-                )
+                const Text('loading', style: DZ.caption)
               else ...[
-                Text(
-                  error!,
-                  style: const TextStyle(color: DZ.white, fontSize: 14),
-                ),
+                Text(error!, style: DZ.body, textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: onRetry,

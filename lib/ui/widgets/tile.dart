@@ -54,7 +54,8 @@ class MetroTile extends StatefulWidget {
   State<MetroTile> createState() => _MetroTileState();
 }
 
-class _MetroTileState extends State<MetroTile> with SingleTickerProviderStateMixin {
+class _MetroTileState extends State<MetroTile>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: DZ.tiltPress,
@@ -102,7 +103,8 @@ class _MetroTileState extends State<MetroTile> with SingleTickerProviderStateMix
       child: FocusableActionDetector(
         focusNode: widget.focusNode,
         autofocus: widget.autofocus,
-        enabled: widget.enabled && (widget.onTap != null || widget.onHold != null),
+        enabled:
+            widget.enabled && (widget.onTap != null || widget.onHold != null),
         onShowFocusHighlight: (v) => setState(() => _focused = v),
         onShowHoverHighlight: (v) => setState(() => _hovered = v),
         mouseCursor: widget.enabled && widget.onTap != null
@@ -118,66 +120,77 @@ class _MetroTileState extends State<MetroTile> with SingleTickerProviderStateMix
           SingleActivator(LogicalKeyboardKey.gameButtonY): _HoldIntent(),
         },
         actions: {
-          ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-            _activate();
-            return null;
-          }),
-          _HoldIntent: CallbackAction<_HoldIntent>(onInvoke: (_) {
-            widget.onHold?.call();
-            return null;
-          }),
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (_) {
+              _activate();
+              return null;
+            },
+          ),
+          _HoldIntent: CallbackAction<_HoldIntent>(
+            onInvoke: (_) {
+              widget.onHold?.call();
+              return null;
+            },
+          ),
         },
-        child: LayoutBuilder(builder: (context, constraints) {
-          final size = constraints.biggest;
-          return GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTapDown: (d) => _down(d.localPosition, size),
-            onTapUp: (_) => _up(),
-            onTapCancel: _up,
-            onTap: widget.enabled ? _activate : null,
-            onLongPress: widget.onHold == null
-                ? null
-                : () {
-                    HapticFeedback.mediumImpact();
-                    widget.onHold!.call();
-                  },
-            child: AnimatedBuilder(
-              animation: _c,
-              builder: (context, child) {
-                final t = reduced || !widget.tilt ? 0.0 : Curves.easeOut.transform(_c.value);
-                final m = Matrix4.identity()
-                  ..setEntry(3, 2, 0.0014) // perspective
-                  ..rotateX(-_point.dy * DZ.tiltMax * t)
-                  ..rotateY(_point.dx * DZ.tiltMax * t)
-                  ..scaleByDouble(
-                      1 - 0.018 * t, 1 - 0.018 * t, 1, 1);
-                return Transform(
-                  alignment: Alignment.center,
-                  transform: m,
-                  child: child,
-                );
-              },
-              child: AnimatedContainer(
-                duration: reduced ? Duration.zero : DZ.stateChange,
-                curve: DZ.ease,
-                decoration: BoxDecoration(
-                  color: widget.fill,
-                  border: _focused
-                      ? Border.all(color: widget.focusColor, width: focusWidth)
-                      : _hovered
-                          ? Border.all(color: DZ.white, width: DZ.hairline)
-                          : null,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = constraints.biggest;
+            return GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapDown: (d) => _down(d.localPosition, size),
+              onTapUp: (_) => _up(),
+              onTapCancel: _up,
+              onTap: widget.enabled ? _activate : null,
+              onLongPress: widget.onHold == null
+                  ? null
+                  : () {
+                      HapticFeedback.mediumImpact();
+                      widget.onHold!.call();
+                    },
+              child: AnimatedBuilder(
+                animation: _c,
+                builder: (context, child) {
+                  final t = reduced || !widget.tilt
+                      ? 0.0
+                      : Curves.easeOut.transform(_c.value);
+                  final m = Matrix4.identity()
+                    ..setEntry(3, 2, 0.0014) // perspective
+                    ..rotateX(-_point.dy * DZ.tiltMax * t)
+                    ..rotateY(_point.dx * DZ.tiltMax * t)
+                    ..scaleByDouble(1 - 0.018 * t, 1 - 0.018 * t, 1, 1);
+                  return Transform(
+                    alignment: Alignment.center,
+                    transform: m,
+                    child: child,
+                  );
+                },
+                child: AnimatedContainer(
+                  duration: reduced ? Duration.zero : DZ.stateChange,
+                  curve: DZ.ease,
+                  decoration: BoxDecoration(
+                    color: widget.fill,
+                    border: _focused
+                        ? Border.all(
+                            color: widget.focusColor,
+                            width: focusWidth,
+                          )
+                        : _hovered
+                        ? Border.all(color: DZ.white, width: DZ.hairline)
+                        : null,
+                  ),
+                  foregroundDecoration: widget.enabled
+                      ? null
+                      // Disabled is a flat knock-down, not a colour change —
+                      // this world has no tinting. One of the two declared
+                      // scrim steps, never a value between them.
+                      : const BoxDecoration(color: DZ.scrimLight),
+                  child: ClipRect(child: widget.child),
                 ),
-                foregroundDecoration: widget.enabled
-                    ? null
-                    // Disabled is a flat knock-down, not a colour change —
-                    // this world has no tinting.
-                    : const BoxDecoration(color: Color(0x99000000)),
-                child: ClipRect(child: widget.child),
               ),
-            ),
-          );
-        }),
+            );
+          },
+        ),
       ),
     );
   }
@@ -237,7 +250,9 @@ class CountTile extends StatelessWidget {
             if (caption != null)
               Text(
                 caption!,
-                style: l.t(DZ.caption).copyWith(color: ink.withValues(alpha: 0.72)),
+                // Hierarchy comes from the type ramp — caption against body —
+                // not from fading the ink, which the ladder has no step for.
+                style: l.t(DZ.caption).copyWith(color: ink),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -266,19 +281,19 @@ class TileProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-        height: height,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            if (track) const ColoredBox(color: DZ.grey4),
-            FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: ratio.clamp(0.0, 1.0),
-              child: ColoredBox(color: color),
-            ),
-          ],
+    height: height,
+    child: Stack(
+      fit: StackFit.expand,
+      children: [
+        if (track) const ColoredBox(color: DZ.grey4),
+        FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: ratio.clamp(0.0, 1.0),
+          child: ColoredBox(color: color),
         ),
-      );
+      ],
+    ),
+  );
 }
 
 /// Small flat badge for a tile corner: "cam", "offline", "s2 · e4".
@@ -290,14 +305,14 @@ class TileBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-        color: fill,
-        child: Text(
-          text.toLowerCase(),
-          style: DZ.label.copyWith(color: inkOn(fill), letterSpacing: 0.6),
-          maxLines: 1,
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+    color: fill,
+    child: Text(
+      text.toLowerCase(),
+      style: DZ.label.copyWith(color: inkOn(fill), letterSpacing: 0.6),
+      maxLines: 1,
+    ),
+  );
 }
 
 /// Metro's loading mark: a short run of squares travelling across the field.
@@ -312,10 +327,12 @@ class MetroLoading extends StatefulWidget {
   State<MetroLoading> createState() => _MetroLoadingState();
 }
 
-class _MetroLoadingState extends State<MetroLoading> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800))
-        ..repeat();
+class _MetroLoadingState extends State<MetroLoading>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  )..repeat();
 
   @override
   void dispose() {
@@ -331,7 +348,11 @@ class _MetroLoadingState extends State<MetroLoading> with SingleTickerProviderSt
         height: 5,
         child: Align(
           alignment: Alignment.centerLeft,
-          child: Container(width: widget.width * 0.4, height: 5, color: widget.color),
+          child: Container(
+            width: widget.width * 0.4,
+            height: 5,
+            color: widget.color,
+          ),
         ),
       );
     }
@@ -368,7 +389,8 @@ class TileSkeleton extends StatefulWidget {
   State<TileSkeleton> createState() => _TileSkeletonState();
 }
 
-class _TileSkeletonState extends State<TileSkeleton> with SingleTickerProviderStateMixin {
+class _TileSkeletonState extends State<TileSkeleton>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 1100),
@@ -391,9 +413,10 @@ class _TileSkeletonState extends State<TileSkeleton> with SingleTickerProviderSt
     if (reducedMotion(context)) return const ColoredBox(color: DZ.grey4);
     return AnimatedBuilder(
       animation: _c,
-      builder: (context, _) => ColoredBox(
-        color: Color.lerp(DZ.grey4, const Color(0xFF333333), _c.value)!,
-      ),
+      // A quantised two-step flip, not a lerp through greys the ladder does
+      // not contain: the skeleton dwells on one declared grey, then the other.
+      builder: (context, _) =>
+          ColoredBox(color: _c.value < 0.5 ? DZ.grey4 : DZ.grey3),
     );
   }
 }
@@ -417,22 +440,95 @@ class TileField extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = Layout.of(context);
     final cols = columns ?? l.columns;
-    return LayoutBuilder(builder: (context, c) {
-      final cell = (c.maxWidth - gap * (cols - 1)) / cols;
-      return Wrap(
-        spacing: gap,
-        runSpacing: gap,
-        children: [
-          for (final child in children)
-            SizedBox(
-              width: cell * math.min(child.cols, cols) + gap * (math.min(child.cols, cols) - 1),
-              height: cell * child.rows + gap * (child.rows - 1),
-              child: child.child,
-            ),
-        ],
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final cell = (c.maxWidth - gap * (cols - 1)) / cols;
+        final placed = _pack(children, cols);
+        final rows = placed.isEmpty
+            ? 0
+            : placed
+                  .map((p) => p.row + p.span.rows)
+                  .reduce((a, b) => a > b ? a : b);
+        double extent(int n) => cell * n + gap * (n - 1);
+        return SizedBox(
+          height: rows == 0 ? 0 : extent(rows),
+          child: Stack(
+            children: [
+              for (final p in placed)
+                Positioned(
+                  left: p.col * (cell + gap),
+                  top: p.row * (cell + gap),
+                  width: extent(math.min(p.span.cols, cols)),
+                  height: extent(p.span.rows),
+                  child: p.span.child,
+                ),
+            ],
+          ),
+        );
+      },
+    );
   }
+
+  /// First-fit packing on a cell grid, the way the tile field is drawn on a
+  /// Windows Phone start screen.
+  ///
+  /// A `Wrap` cannot do this: it lays a run out side by side and makes the run
+  /// as tall as its tallest child, so every 1×1 tile standing beside the 2×2
+  /// lead left the cell underneath it empty — an L-shaped void that grew with
+  /// the window. Here a tile takes the first free block that holds it, so the
+  /// small tiles fill in under their neighbours and the field has no holes.
+  static List<_Placed> _pack(List<TileSpan> spans, int cols) {
+    final grid = <List<bool>>[];
+    final out = <_Placed>[];
+
+    bool free(int row, int col, int w, int h) {
+      for (var r = row; r < row + h; r++) {
+        if (r >= grid.length) continue; // rows below the end are empty
+        for (var c = col; c < col + w; c++) {
+          if (grid[r][c]) return false;
+        }
+      }
+      return true;
+    }
+
+    void occupy(int row, int col, int w, int h) {
+      while (grid.length < row + h) {
+        grid.add(List<bool>.filled(cols, false));
+      }
+      for (var r = row; r < row + h; r++) {
+        for (var c = col; c < col + w; c++) {
+          grid[r][c] = true;
+        }
+      }
+    }
+
+    for (final span in spans) {
+      final w = math.min(span.cols, cols);
+      final h = span.rows;
+      var row = 0;
+      var col = 0;
+      var found = false;
+      while (!found) {
+        for (col = 0; col <= cols - w; col++) {
+          if (free(row, col, w, h)) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) row++;
+      }
+      occupy(row, col, w, h);
+      out.add(_Placed(span, row, col));
+    }
+    return out;
+  }
+}
+
+class _Placed {
+  const _Placed(this.span, this.row, this.col);
+  final TileSpan span;
+  final int row;
+  final int col;
 }
 
 /// A child of a [TileField] and its span in grid cells.

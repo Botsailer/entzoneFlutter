@@ -16,15 +16,18 @@ enum LibraryTab { continueWatching, list, downloads, history }
 
 extension LibraryTabX on LibraryTab {
   String get label => switch (this) {
-        LibraryTab.continueWatching => 'continue',
-        LibraryTab.list => 'my list',
-        LibraryTab.downloads => 'downloads',
-        LibraryTab.history => 'history',
-      };
+    LibraryTab.continueWatching => 'continue',
+    LibraryTab.list => 'my list',
+    LibraryTab.downloads => 'downloads',
+    LibraryTab.history => 'history',
+  };
 }
 
 class LibraryScreen extends ConsumerStatefulWidget {
-  const LibraryScreen({super.key, this.initialTab = LibraryTab.continueWatching});
+  const LibraryScreen({
+    super.key,
+    this.initialTab = LibraryTab.continueWatching,
+  });
   final LibraryTab initialTab;
 
   @override
@@ -79,7 +82,10 @@ class _ContinuePane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = Layout.of(context);
-    final entries = ref.watch(historyProvider).where((e) => !e.finished).toList();
+    final entries = ref
+        .watch(historyProvider)
+        .where((e) => !e.finished)
+        .toList();
     final progress = ref.watch(progressProvider);
 
     if (entries.isEmpty) {
@@ -87,10 +93,11 @@ class _ContinuePane extends ConsumerWidget {
         padding: padding,
         child: StateBlock(
           headline: 'nothing started yet',
-          detail: 'Play something and it will wait for you here, at the exact '
+          detail:
+              'Play something and it will wait for you here, at the exact '
               'second you stopped.',
           actionLabel: 'browse the catalog',
-          onAction: () => Nav.openLibrary(context, LibraryTab.continueWatching),
+          onAction: () => Nav.goHome(context),
         ),
       );
     }
@@ -109,7 +116,11 @@ class _ContinuePane extends ConsumerWidget {
         return LeadTile(
           subject: e.subject,
           progress: progress[progressKey(e.subject.subjectId, e.episode)],
-          caption: meta([e.episode?.short, formatLeft(e.remaining), timeAgo(e.at)]),
+          caption: meta([
+            e.episode?.short,
+            formatLeft(e.remaining),
+            timeAgo(e.at),
+          ]),
           onTap: () => Nav.resume(context, ref, e),
           onHold: () => _entryMenu(context, ref, e),
         );
@@ -131,10 +142,12 @@ class _ListPane extends ConsumerWidget {
     if (items.isEmpty) {
       return Padding(
         padding: padding,
-        child: const StateBlock(
+        child: StateBlock(
           headline: 'your list is empty',
-          detail: 'Add a title from its page and it will be here on every '
-              'device you sign this app into.',
+          detail:
+              'Add a title from its page and it waits here, on this device.',
+          actionLabel: 'find something',
+          onAction: () => Nav.goHome(context),
         ),
       );
     }
@@ -168,41 +181,49 @@ class _DownloadsPane extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = Layout.of(context);
-    final items = ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
+    final items =
+        ref.watch(downloadsProvider).asData?.value ?? Downloads.i.items;
 
     if (items.isEmpty) {
       return Padding(
         padding: padding,
-        child: const StateBlock(
+        child: StateBlock(
           headline: 'nothing downloaded',
-          detail: 'Download a film or an episode from its page and it plays '
+          detail:
+              'Download a film or an episode from its page and it plays '
               'here with no connection at all.',
+          actionLabel: 'find something',
+          onAction: () => Nav.goHome(context),
         ),
       );
     }
 
-    final active = items.where((d) => d.active || d.status == DownloadStatus.paused).toList();
+    final active = items
+        .where((d) => d.active || d.status == DownloadStatus.paused)
+        .toList();
     final done = items.where((d) => d.status == DownloadStatus.done).toList();
-    final failed = items.where((d) => d.status == DownloadStatus.failed).toList();
+    final failed = items
+        .where((d) => d.status == DownloadStatus.failed)
+        .toList();
     final onDisk = done.fold<int>(0, (a, b) => a + b.total);
 
     Widget grid(List<DownloadItem> list) => GridView.builder(
-          padding: EdgeInsets.zero,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: l.columns,
-            mainAxisSpacing: DZ.gap,
-            crossAxisSpacing: DZ.gap,
-            childAspectRatio: 1 / 1.5,
-          ),
-          itemCount: list.length,
-          itemBuilder: (context, i) => DownloadTile(
-            item: list[i],
-            onTap: () => _downloadAction(context, ref, list[i]),
-            onHold: () => _downloadMenu(context, ref, list[i]),
-          ),
-        );
+      padding: EdgeInsets.zero,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: l.columns,
+        mainAxisSpacing: DZ.gap,
+        crossAxisSpacing: DZ.gap,
+        childAspectRatio: 1 / 1.5,
+      ),
+      itemCount: list.length,
+      itemBuilder: (context, i) => DownloadTile(
+        item: list[i],
+        onTap: () => _downloadAction(context, ref, list[i]),
+        onHold: () => _downloadMenu(context, ref, list[i]),
+      ),
+    );
 
     return ListView(
       padding: padding.copyWith(bottom: 48 + l.overscan.bottom),
@@ -214,7 +235,10 @@ class _DownloadsPane extends ConsumerWidget {
             color: DZ.magenta,
             trailing: GestureDetector(
               onTap: () => Downloads.i.pauseAll(),
-              child: Text('pause all', style: l.t(DZ.caption).copyWith(color: DZ.grey1)),
+              child: Text(
+                'pause all',
+                style: l.t(DZ.caption).copyWith(color: DZ.grey1),
+              ),
             ),
           ),
           grid(active),
@@ -249,9 +273,11 @@ class _HistoryPane extends ConsumerWidget {
     if (entries.isEmpty) {
       return Padding(
         padding: padding,
-        child: const StateBlock(
+        child: StateBlock(
           headline: 'no history yet',
           detail: 'Everything you watch is recorded here, on this device only.',
+          actionLabel: 'browse the catalog',
+          onAction: () => Nav.goHome(context),
         ),
       );
     }
@@ -315,77 +341,83 @@ void _downloadAction(BuildContext context, WidgetRef ref, DownloadItem d) {
       Nav.openTitle(context, d.subject);
     case DownloadStatus.downloading:
       Downloads.i.pause(d.id);
-    case DownloadStatus.paused || DownloadStatus.queued || DownloadStatus.failed:
+    case DownloadStatus.paused ||
+        DownloadStatus.queued ||
+        DownloadStatus.failed:
       Downloads.i.resume(d.id);
   }
 }
 
-Future<void> _downloadMenu(BuildContext context, WidgetRef ref, DownloadItem d) =>
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: DZ.black,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(DZ.margin, 20, DZ.margin, 6),
-              child: Text(d.subject.cleanTitle.toLowerCase(), style: DZ.subtitle),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(DZ.margin, 0, DZ.margin, 16),
-              child: Text(
-                meta([
-                  d.isEpisode ? 's${d.se} · e${d.ep}' : 'film',
-                  d.quality,
-                  formatBytes(d.total),
-                ]),
-                style: DZ.caption,
-              ),
-            ),
-            if (d.status == DownloadStatus.done)
-              _Row(
-                label: 'open this title',
-                icon: Icons.play_arrow,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Nav.openTitle(context, d.subject);
-                },
-              ),
-            if (d.active)
-              _Row(
-                label: 'pause',
-                icon: Icons.pause,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Downloads.i.pause(d.id);
-                },
-              ),
-            if (d.status == DownloadStatus.paused || d.status == DownloadStatus.failed)
-              _Row(
-                label: 'resume',
-                icon: Icons.play_arrow,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Downloads.i.resume(d.id);
-                },
-              ),
-            _Row(
-              label: 'delete from this device',
-              icon: Icons.delete_outline,
-              tone: DZ.red,
-              onTap: () {
-                Navigator.pop(ctx);
-                Downloads.i.remove(d.id);
-                notify(context, 'download removed');
-              },
-            ),
-            const SizedBox(height: 10),
-          ],
+Future<void> _downloadMenu(
+  BuildContext context,
+  WidgetRef ref,
+  DownloadItem d,
+) => showModalBottomSheet<void>(
+  context: context,
+  backgroundColor: DZ.black,
+  builder: (ctx) => SafeArea(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(DZ.margin, 20, DZ.margin, 6),
+          child: Text(d.subject.cleanTitle.toLowerCase(), style: DZ.subtitle),
         ),
-      ),
-    );
+        Padding(
+          padding: const EdgeInsets.fromLTRB(DZ.margin, 0, DZ.margin, 16),
+          child: Text(
+            meta([
+              d.isEpisode ? 's${d.se} · e${d.ep}' : 'film',
+              d.quality,
+              formatBytes(d.total),
+            ]),
+            style: DZ.caption,
+          ),
+        ),
+        if (d.status == DownloadStatus.done)
+          _Row(
+            label: 'open this title',
+            icon: Icons.play_arrow,
+            onTap: () {
+              Navigator.pop(ctx);
+              Nav.openTitle(context, d.subject);
+            },
+          ),
+        if (d.active)
+          _Row(
+            label: 'pause',
+            icon: Icons.pause,
+            onTap: () {
+              Navigator.pop(ctx);
+              Downloads.i.pause(d.id);
+            },
+          ),
+        if (d.status == DownloadStatus.paused ||
+            d.status == DownloadStatus.failed)
+          _Row(
+            label: 'resume',
+            icon: Icons.play_arrow,
+            onTap: () {
+              Navigator.pop(ctx);
+              Downloads.i.resume(d.id);
+            },
+          ),
+        _Row(
+          label: 'delete from this device',
+          icon: Icons.delete_outline,
+          tone: DZ.red,
+          onTap: () {
+            Navigator.pop(ctx);
+            Downloads.i.remove(d.id);
+            notify(context, 'download removed');
+          },
+        ),
+        const SizedBox(height: 10),
+      ],
+    ),
+  ),
+);
 
 Future<void> _entryMenu(BuildContext context, WidgetRef ref, HistoryEntry e) =>
     showModalBottomSheet<void>(
@@ -398,7 +430,10 @@ Future<void> _entryMenu(BuildContext context, WidgetRef ref, HistoryEntry e) =>
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(DZ.margin, 20, DZ.margin, 14),
-              child: Text(e.subject.cleanTitle.toLowerCase(), style: DZ.subtitle),
+              child: Text(
+                e.subject.cleanTitle.toLowerCase(),
+                style: DZ.subtitle,
+              ),
             ),
             _Row(
               label: 'open this title',
@@ -413,7 +448,8 @@ Future<void> _entryMenu(BuildContext context, WidgetRef ref, HistoryEntry e) =>
               icon: Icons.restart_alt,
               onTap: () {
                 Navigator.pop(ctx);
-                ref.read(progressProvider.notifier)
+                ref
+                    .read(progressProvider.notifier)
                     .clearOne(e.subject.subjectId, e.episode);
                 notify(context, 'watch position cleared');
               },
@@ -483,14 +519,18 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: DZ.margin, vertical: 15),
-          child: Row(children: [
-            Icon(icon, size: 20, color: tone),
-            const SizedBox(width: 14),
-            Expanded(child: Text(label, style: DZ.body.copyWith(color: tone))),
-          ]),
-        ),
-      );
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DZ.margin, vertical: 15),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: tone),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(label, style: DZ.body.copyWith(color: tone)),
+          ),
+        ],
+      ),
+    ),
+  );
 }

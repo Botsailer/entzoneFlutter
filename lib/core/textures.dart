@@ -26,9 +26,9 @@ class TexturePatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => CustomPaint(
-        painter: _TexturePainter(texture, color, opacity, cell),
-        isComplex: false,
-      );
+    painter: _TexturePainter(texture, color, opacity, cell),
+    isComplex: false,
+  );
 }
 
 class _TexturePainter extends CustomPainter {
@@ -58,7 +58,11 @@ class _TexturePainter extends CustomPainter {
       case Texture.pinstripe:
         paint.style = PaintingStyle.stroke;
         for (double x = 0; x < size.width; x += cell) {
-          canvas.drawLine(Offset(x + .5, 0), Offset(x + .5, size.height), paint);
+          canvas.drawLine(
+            Offset(x + .5, 0),
+            Offset(x + .5, size.height),
+            paint,
+          );
         }
       case Texture.slash:
         paint.style = PaintingStyle.stroke;
@@ -101,17 +105,17 @@ class CornerDots extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-        child: SizedBox(
-          width: cols * cell,
-          height: rows * cell,
-          child: TexturePatch(
-            texture: Texture.dots,
-            color: color,
-            opacity: opacity,
-            cell: cell,
-          ),
-        ),
-      );
+    child: SizedBox(
+      width: cols * cell,
+      height: rows * cell,
+      child: TexturePatch(
+        texture: Texture.dots,
+        color: color,
+        opacity: opacity,
+        cell: cell,
+      ),
+    ),
+  );
 }
 
 /// A flat scrim over artwork so a tile's own name stays legible. Not a gradient:
@@ -124,9 +128,6 @@ class FlatScrim extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-        child: Container(
-          height: height,
-          color: heavy ? DZ.scrim : DZ.scrimLight,
-        ),
-      );
+    child: Container(height: height, color: heavy ? DZ.scrim : DZ.scrimLight),
+  );
 }

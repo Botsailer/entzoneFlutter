@@ -59,7 +59,10 @@ String formatEta(Duration? d) {
 
 /// "just now" · "12m ago" · "3d ago" · a date.
 String timeAgo(int ms) {
-  final s = ((DateTime.now().millisecondsSinceEpoch - ms) / 1000).clamp(0, double.infinity);
+  final s = ((DateTime.now().millisecondsSinceEpoch - ms) / 1000).clamp(
+    0,
+    double.infinity,
+  );
   if (s < 60) return 'just now';
   if (s < 3600) return '${(s / 60).floor()}m ago';
   if (s < 86400) return '${(s / 3600).floor()}h ago';

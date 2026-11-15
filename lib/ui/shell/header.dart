@@ -10,18 +10,18 @@ enum Dest { home, search, library, settings }
 
 extension DestX on Dest {
   String get label => switch (this) {
-        Dest.home => 'home',
-        Dest.search => 'search',
-        Dest.library => 'library',
-        Dest.settings => 'you',
-      };
+    Dest.home => 'home',
+    Dest.search => 'search',
+    Dest.library => 'library',
+    Dest.settings => 'you',
+  };
 
   IconData get icon => switch (this) {
-        Dest.home => Icons.home_outlined,
-        Dest.search => Icons.search,
-        Dest.library => Icons.bookmark_border,
-        Dest.settings => Icons.person_outline,
-      };
+    Dest.home => Icons.home_outlined,
+    Dest.search => Icons.search,
+    Dest.library => Icons.bookmark_border,
+    Dest.settings => Icons.person_outline,
+  };
 }
 
 /// Which catalog the shell is showing. The structural counterpart of the
@@ -72,11 +72,16 @@ class HeaderBand extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         color: DZ.black,
-        border: Border(bottom: BorderSide(color: DZ.grey4, width: DZ.hairline)),
+        border: Border(
+          bottom: BorderSide(color: DZ.grey4, width: DZ.hairline),
+        ),
       ),
       child: Row(
         children: [
-          const _BrandMark(),
+          // The band carries four committed elements, so none of them is
+          // dropped when the window narrows — the brand gives up width first
+          // and the field second, and nothing overflows the band.
+          Flexible(flex: 2, child: _BrandMark(wordmark: l.size.width >= 900)),
           SizedBox(width: tight ? 20 : 38),
           _SourceSwitch(source: source, onChanged: onSource),
           const Spacer(),
@@ -101,19 +106,27 @@ class HeaderBand extends StatelessWidget {
                   tooltip: d.label,
                   active: dest == d,
                   size: 40,
-                  badge: d == Dest.library && downloadCount > 0 ? DZ.magenta : null,
+                  badge: d == Dest.library && downloadCount > 0
+                      ? DZ.magenta
+                      : null,
                   onPressed: () => onDest(d),
                 ),
               ),
             const SizedBox(width: 16),
           ],
-          SizedBox(
-            width: tight ? 190 : 280,
-            child: MetroField(
-              controller: searchController,
-              hint: 'search titles',
-              leading: Icons.search,
-              onSubmitted: onSearch,
+          Flexible(
+            flex: 3,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: tight ? 190 : 280,
+                minWidth: 104,
+              ),
+              child: MetroField(
+                controller: searchController,
+                hint: 'search titles',
+                leading: Icons.search,
+                onSubmitted: onSearch,
+              ),
             ),
           ),
         ],
@@ -125,7 +138,11 @@ class HeaderBand extends StatelessWidget {
 /// Brand mark and name. The mark is the dot-matrix patch the world already
 /// owns, in the live-state colour — not a logo this app does not have.
 class _BrandMark extends StatelessWidget {
-  const _BrandMark();
+  const _BrandMark({this.wordmark = true});
+
+  /// Below a narrow band the mark stands alone. A wordmark clipped to
+  /// "depre…" reads as a bug; the dot-matrix patch is the identity either way.
+  final bool wordmark;
 
   @override
   Widget build(BuildContext context) {
@@ -136,15 +153,29 @@ class _BrandMark extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'depressedzone',
-            style: l.t(DZ.subtitle).copyWith(
-                  fontVariations: const [FontVariation('wght', 300)],
-                ),
-            maxLines: 1,
+          if (wordmark) ...[
+            Flexible(
+              child: Text(
+                'depressedzone',
+                style: l
+                    .t(DZ.subtitle)
+                    .copyWith(
+                      fontVariations: const [FontVariation('wght', 300)],
+                    ),
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 11),
+          ],
+          const CornerDots(
+            color: DZ.cyan,
+            opacity: 1,
+            cols: 3,
+            rows: 3,
+            cell: 5,
           ),
-          const SizedBox(width: 11),
-          const CornerDots(color: DZ.cyan, opacity: 1, cols: 3, rows: 3, cell: 5),
         ],
       ),
     );
@@ -168,7 +199,8 @@ class _SourceSwitch extends StatelessWidget {
         height: l.isTV ? 44 : 36,
         decoration: const BoxDecoration(
           border: Border.fromBorderSide(
-              BorderSide(color: DZ.grey3, width: DZ.hairline)),
+            BorderSide(color: DZ.grey3, width: DZ.hairline),
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -217,16 +249,18 @@ class _SegmentState extends State<_Segment> {
     final fg = widget.on
         ? inkOn(widget.fill)
         : _focused
-            ? DZ.cyan
-            : DZ.grey1;
+        ? DZ.cyan
+        : DZ.grey1;
     return FocusableActionDetector(
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
-          return null;
-        }),
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap();
+            return null;
+          },
+        ),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -245,7 +279,9 @@ class _SegmentState extends State<_Segment> {
             ),
             child: Text(
               widget.label,
-              style: l.t(DZ.caption).copyWith(
+              style: l
+                  .t(DZ.caption)
+                  .copyWith(
                     color: fg,
                     fontVariations: const [FontVariation('wght', 600)],
                   ),
@@ -288,17 +324,19 @@ class _NavWordState extends State<_NavWord> {
     final color = _focused || _hovered
         ? DZ.cyan
         : widget.on
-            ? DZ.white
-            : DZ.grey2;
+        ? DZ.white
+        : DZ.grey2;
     return FocusableActionDetector(
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       onShowHoverHighlight: (v) => setState(() => _hovered = v),
       mouseCursor: SystemMouseCursors.click,
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
-          return null;
-        }),
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap();
+            return null;
+          },
+        ),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -316,12 +354,14 @@ class _NavWordState extends State<_NavWord> {
                 children: [
                   Text(
                     widget.label,
-                    style: l.t(DZ.body).copyWith(
-                      color: color,
-                      fontVariations: [
-                        FontVariation('wght', widget.on ? 600 : 400),
-                      ],
-                    ),
+                    style: l
+                        .t(DZ.body)
+                        .copyWith(
+                          color: color,
+                          fontVariations: [
+                            FontVariation('wght', widget.on ? 600 : 400),
+                          ],
+                        ),
                   ),
                   if (widget.badge) ...[
                     const SizedBox(width: 6),
@@ -331,7 +371,9 @@ class _NavWordState extends State<_NavWord> {
               ),
               const SizedBox(height: 7),
               AnimatedContainer(
-                duration: reducedMotion(context) ? Duration.zero : DZ.stateChange,
+                duration: reducedMotion(context)
+                    ? Duration.zero
+                    : DZ.stateChange,
                 curve: DZ.ease,
                 height: 2,
                 width: widget.on ? 22 : 0,
@@ -408,15 +450,17 @@ class _BarCellState extends State<_BarCell> {
     final fg = on
         ? inkOn(DZ.cyan)
         : _focused
-            ? DZ.cyan
-            : DZ.white;
+        ? DZ.cyan
+        : DZ.white;
     return FocusableActionDetector(
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
-          return null;
-        }),
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap();
+            return null;
+          },
+        ),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -448,7 +492,11 @@ class _BarCellState extends State<_BarCell> {
                       Positioned(
                         right: -4,
                         top: -2,
-                        child: Container(width: 7, height: 7, color: DZ.magenta),
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          color: DZ.magenta,
+                        ),
                       ),
                   ],
                 ),

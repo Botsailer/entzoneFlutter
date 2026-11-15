@@ -63,7 +63,11 @@ class _PivotState extends State<Pivot> {
         if (reduced) {
           _pages.jumpToPage(widget.index);
         } else {
-          _pages.animateToPage(widget.index, duration: DZ.paneSlide, curve: DZ.ease);
+          _pages.animateToPage(
+            widget.index,
+            duration: DZ.paneSlide,
+            curve: DZ.ease,
+          );
         }
       }
       _revealLabel(widget.index);
@@ -89,8 +93,10 @@ class _PivotState extends State<Pivot> {
       final headerBox = context.findRenderObject() as RenderBox?;
       if (headerBox == null) return;
       final dx = box.localToGlobal(Offset.zero, ancestor: headerBox).dx;
-      final target = (_headerScroll.offset + dx - widget.padding.left)
-          .clamp(0.0, _headerScroll.position.maxScrollExtent);
+      final target = (_headerScroll.offset + dx - widget.padding.left).clamp(
+        0.0,
+        _headerScroll.position.maxScrollExtent,
+      );
       if ((target - _headerScroll.offset).abs() < 2) return;
       if (reducedMotion(context)) {
         _headerScroll.jumpTo(target);
@@ -115,7 +121,8 @@ class _PivotState extends State<Pivot> {
       bindings: {
         const SingleActivator(LogicalKeyboardKey.bracketRight): () => _step(1),
         const SingleActivator(LogicalKeyboardKey.bracketLeft): () => _step(-1),
-        const SingleActivator(LogicalKeyboardKey.tab, control: true): () => _step(1),
+        const SingleActivator(LogicalKeyboardKey.tab, control: true): () =>
+            _step(1),
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +137,8 @@ class _PivotState extends State<Pivot> {
               padding: widget.padding,
               // Never clip the trailing word — the peek is load-bearing.
               clipBehavior: Clip.none,
-              itemCount: widget.labels.length + (widget.trailing != null ? 1 : 0),
+              itemCount:
+                  widget.labels.length + (widget.trailing != null ? 1 : 0),
               itemBuilder: (context, i) {
                 if (i >= widget.labels.length) {
                   return Padding(
@@ -142,7 +150,9 @@ class _PivotState extends State<Pivot> {
                 final key = _labelKeys.putIfAbsent(i, GlobalKey.new);
                 return Padding(
                   key: key,
-                  padding: EdgeInsets.only(right: i == widget.labels.length - 1 ? 0 : 22),
+                  padding: EdgeInsets.only(
+                    right: i == widget.labels.length - 1 ? 0 : 22,
+                  ),
                   child: _PivotLabel(
                     label: widget.labels[i],
                     on: on,
@@ -200,17 +210,19 @@ class _PivotLabelState extends State<_PivotLabel> {
     final color = _focused
         ? DZ.cyan
         : widget.on
-            ? DZ.white
-            : DZ.grey2;
+        ? DZ.white
+        : DZ.grey2;
 
     return FocusableActionDetector(
       onShowFocusHighlight: (v) => setState(() => _focused = v),
       mouseCursor: SystemMouseCursors.click,
       actions: {
-        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) {
-          widget.onTap();
-          return null;
-        }),
+        ActivateIntent: CallbackAction<ActivateIntent>(
+          onInvoke: (_) {
+            widget.onTap();
+            return null;
+          },
+        ),
       },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
