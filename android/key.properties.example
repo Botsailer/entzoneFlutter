@@ -1,0 +1,11 @@
+# Copy to android/key.properties and fill in to sign a distributable release.
+# Without this file, release builds are signed with the debug key and must not
+# be published.
+#
+#   keytool -genkey -v -keystore %USERPROFILE%\depressedzone.jks ^
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias depressedzone
+#
+storePassword=
+keyPassword=
+keyAlias=depressedzone
+storeFile=C:/Users/you/depressedzone.jks
